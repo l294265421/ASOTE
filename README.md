@@ -1,5 +1,9 @@
 # The code and data for the paper "A More Fine-Grained Aspect-Sentiment-Opinion Triplet Extraction Task" [paper](https://arxiv.org/pdf/2103.15255.pdf)
 
+# Differences between ASOTE and ASTE
+![](figures/asote_vs_aste.png)
+In the third sentence, the negative sentiment toward the aspect term “food” isexpressed without an annotatable opinion.
+
 # Requirements
 - Python 3.6.8
 - torch==1.2.0
@@ -36,7 +40,3 @@ scripts/mil_aso.predict.sh
 
 # evaluate
 scripts/evaluate.sh
-
-# Differences between ASOTE and ASTE
-![](figures/asote_vs_aste.png)
-In the third sentence, the negative sentiment toward the aspect term “food” isexpressed without an annotatable opinion.
