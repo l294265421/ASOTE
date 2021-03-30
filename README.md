@@ -39,4 +39,4 @@ scripts/evaluate.sh
 
 # Differences between ASOTE and ASTE
 ![](figures/asote_vs_aste.png)
-n the third sentence, the negative sentiment toward “food” isexpressed without an annotatable opinion.
+In the third sentence, the negative sentiment toward “food” isexpressed without an annotatable opinion.
