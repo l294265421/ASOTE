@@ -22,10 +22,10 @@ scripts/towe.predic.sh
 # AOSC
 scripts/tosc.sh
 
-# P-ASO-u
+# U-ASO
 scripts/towe_tosc_jointly.sh
 
-# P-ASO-u inference
+# U-ASO inference
 scripts/towe_tosc_jointly.predict.sh
 
 # MIL-ASO
