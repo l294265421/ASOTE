@@ -4,7 +4,7 @@
 Aspect-Sentiment-Opinion Triplet Extraction (ASOTE) extracts aspect term, sentiment and opinion term triplets from sentences. In the triplet extracted by ASOTE the sentiment is the sentiment of the aspect term and opinion term pair. For example, given the sentence, "The atmosphere is attractive , but a little uncomfortable.", ASOTE extracts two triplets, ("atmosphere", positive, "attractive") and ("atmosphere", negative, "uncomfortable").
 
 # Differences between ASOTE and ASTE
-Aspect Sentiment Triplet Extraction (ASTE) ([Knowing What, How and Why: A Near Complete Solution for Aspect-based Sentiment Analysis](https://arxiv.org/abs/1911.01616)) also extracts triplets from sentences. Each triplet extracted by ASTE contains an aspect, <font color="red">the sentiment that the sentence expresses toward the aspect term</font>, and one opinion term associated with the aspect.
+Aspect Sentiment Triplet Extraction (ASTE) ([Knowing What, How and Why: A Near Complete Solution for Aspect-based Sentiment Analysis](https://arxiv.org/abs/1911.01616)) also extracts triplets from sentences. Each triplet extracted by ASTE contains an aspect, <big>the sentiment that the sentence expresses toward the aspect term</big>, and one opinion term associated with the aspect.
 
 ![](figures/asote_vs_aste.png)
 In the third sentence, the negative sentiment toward the aspect term “food” isexpressed without an annotatable opinion.
