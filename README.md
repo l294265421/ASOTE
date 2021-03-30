@@ -36,3 +36,6 @@ scripts/mil_aso.predict.sh
 
 # evaluate
 scripts/evaluate.sh
+
+# Differences between ASOTE and ASTE.
+![](figures/asote_vs_aste.png)
