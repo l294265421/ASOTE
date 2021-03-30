@@ -1,4 +1,4 @@
-# The code and data for the paper "A More Fine-Grained Aspect-Sentiment-Opinion Triplet Extraction Task"
+# The code and data for the paper "A More Fine-Grained Aspect-Sentiment-Opinion Triplet Extraction Task" [paper](https://arxiv.org/pdf/2103.15255.pdf)
 
 # Requirements
 - Python 3.6.8
