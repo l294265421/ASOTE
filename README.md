@@ -9,6 +9,9 @@ Aspect Sentiment Triplet Extraction (ASTE) ([Knowing What, How and Why: A Near C
 ![](figures/asote_vs_aste.png)
 In the third sentence, the negative sentiment toward the aspect term “food” isexpressed without an annotatable opinion.
 
+# Data
+We build four datasets for the ASOTE task: [14res](ASOTE-data/absa/ASOTE/rest14), [14lap](ASOTE-data/absa/ASOTE/lapt14), [15res](ASOTE-data/absa/ASOTE/rest15), [16res](ASOTE-data/absa/ASOTE/rest16).
+
 # Requirements
 - Python 3.6.8
 - torch==1.2.0
