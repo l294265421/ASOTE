@@ -37,5 +37,6 @@ scripts/mil_aso.predict.sh
 # evaluate
 scripts/evaluate.sh
 
-# Differences between ASOTE and ASTE.
+# Differences between ASOTE and ASTE
 ![](figures/asote_vs_aste.png)
+n the third sentence, the negative sentiment toward “food” isexpressed without an annotatable opinion.
