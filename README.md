@@ -16,7 +16,130 @@ A few models have been proposed for the ASTE task. We will evaluate their perfor
 - more models...
 
 # Data
-We build four datasets for the ASOTE task: [14res](ASOTE-data/absa/ASOTE/rest14), [14lap](ASOTE-data/absa/ASOTE/lapt14), [15res](ASOTE-data/absa/ASOTE/rest15), [16res](ASOTE-data/absa/ASOTE/rest16).
+We build four datasets for the ASOTE task: [14res](ASOTE-data/absa/ASOTE/rest14), [14lap](ASOTE-data/absa/ASOTE/lapt14), [15res](ASOTE-data/absa/ASOTE/rest15), [16res](ASOTE-data/absa/ASOTE/rest16). 
+
+Specifically, we first construct four ASTE datasets by merging four ATSA datasets from three SemEval tasks ([SemEval-2014 Task 4](https://alt.qcri.org/semeval2014/task4/), [SemEval-2015 Task 12](https://alt.qcri.org/semeval2015/task12/), [SemEval-2016 Task 5](https://alt.qcri.org/semeval2016/task5/)) and four [TOWE datasets](https://www.aclweb.org/anthology/N19-1259.pdf) like [Knowing What, How and Why: A Near Complete Solution for Aspect-based Sentiment Analysis](https://arxiv.org/abs/1911.01616), then manually annotate the sentiment of the aspect and opinion pair in the ASTE datasets. 
+
+For example, given the sentence, "The atmosphere is attractive, but a little uncomfortable.", its annotations in [SemEval-2014 Task 4](https://alt.qcri.org/semeval2014/task4/) are as follows:
+```xml
+<sentence id="32464601#418474#1">
+    <text>The atmosphere is attractive, but a little uncomfortable.</text>
+    <aspectTerms>
+        <aspectTerm term="atmosphere" polarity="conflict"  from="4" to="14"/>
+    </aspectTerms>
+</sentence>
+```
+its annotations in [TOWE datasets](https://www.aclweb.org/anthology/N19-1259.pdf) are as follows:
+```text
+32464601#418474#1	The atmosphere is attractive , but a little uncomfortable .	The\O atmosphere\B is\O attractive\O ,\O but\O a\O little\O uncomfortable\O .\O	The\O atmosphere\O is\O attractive\B ,\O but\O a\O little\O uncomfortable\B .\O
+
+```
+
+We align the above annotations of the sentence and get an ASTE sample:
+```json
+{
+    "sentence": "The atmosphere is attractive , but a little uncomfortable .", 
+    "words": [
+        "The", 
+        "atmosphere", 
+        "is", 
+        "attractive", 
+        ",", 
+        "but", 
+        "a", 
+        "little", 
+        "uncomfortable", 
+        "."
+    ], 
+    "polarity": "conflict", 
+    "opinions": [
+        {
+            "aspect_term": {
+                "start": 1, 
+                "end": 2, 
+                "term": "atmosphere"
+            }, 
+            "opinion_term": {
+                "start": 3, 
+                "end": 4, 
+                "term": "attractive"
+            }
+        }, 
+        {
+            "aspect_term": {
+                "start": 1, 
+                "end": 2, 
+                "term": "atmosphere"
+            }, 
+            "opinion_term": {
+                "start": 8, 
+                "end": 9, 
+                "term": "uncomfortable"
+            }
+        }
+    ], 
+    "aspect_term": {
+        "start": 1, 
+        "end": 2, 
+        "term": "atmosphere"
+    }
+}
+```
+
+We then annotate the sentiments of the aspect term and opinion term pairs in the ASTE sample and get an ASOTE sample:
+```json
+{
+    "sentence": "The atmosphere is attractive , but a little uncomfortable .", 
+    "words": [
+        "The", 
+        "atmosphere", 
+        "is", 
+        "attractive", 
+        ",", 
+        "but", 
+        "a", 
+        "little", 
+        "uncomfortable", 
+        "."
+    ], 
+    "polarity": "conflict", 
+    "opinions": [
+        {
+            "aspect_term": {
+                "start": 1, 
+                "end": 2, 
+                "term": "atmosphere"
+            }, 
+            "opinion_term": {
+                "start": 3, 
+                "end": 4, 
+                "term": "attractive"
+            }, 
+            "polarity": "positive"
+        }, 
+        {
+            "aspect_term": {
+                "start": 1, 
+                "end": 2, 
+                "term": "atmosphere"
+            }, 
+            "opinion_term": {
+                "start": 8, 
+                "end": 9, 
+                "term": "uncomfortable"
+            }, 
+            "polarity": "negative"
+        }
+    ], 
+    "aspect_term": {
+        "start": 1, 
+        "end": 2, 
+        "term": "atmosphere"
+    }
+}
+```
+
+Note that, in our ASOTE datasets, triplets belonging to different aspect terms in the same sentence are in different json lines.
 
 # Requirements
 - Python 3.6.8
