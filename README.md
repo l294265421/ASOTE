@@ -6,7 +6,7 @@ Aspect-Sentiment-Opinion Triplet Extraction (ASOTE) extracts aspect term, sentim
 # Differences between ASOTE and ASTE
 Aspect Sentiment Triplet Extraction (ASTE) ([Knowing What, How and Why: A Near Complete Solution for Aspect-based Sentiment Analysis](https://arxiv.org/abs/1911.01616)) also extracts triplets from sentences. Each triplet extracted by ASTE contains an aspect term, <u>the sentiment that the sentence expresses toward the aspect term</u>, and one opinion term associated with the aspect.
 
-![](figures/asote_vs_aste.png)
+![asote_vs_aste](figures/asote_vs_aste.png)
 In the third sentence, the negative sentiment toward the aspect term “food” isexpressed without an annotatable opinion.
 
 A few models have been proposed to extract opinion triplets from sentences. However, these models were only evaluated on the ASTE task  and we will evaluate their performances on the ASOTE task.
