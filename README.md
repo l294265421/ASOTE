@@ -9,7 +9,7 @@ Aspect Sentiment Triplet Extraction (ASTE) ([Knowing What, How and Why: A Near C
 
 More examples are as follows:
 ![asote_vs_aste](figures/asote_vs_aste.png)
-In the third sentence, the negative sentiment toward the aspect term “food” isexpressed without an annotatable opinion.
+In the third sentence, the negative sentiment toward the aspect term “food” is expressed without an annotatable opinion.
 
 # Baselines
 Some models have been proposed to extract opinion triplets from sentences. However, these models were only evaluated on the ASTE task. We have evaluated the performances of a few opinion triplet extraction models on the ASOTE task:
