@@ -146,38 +146,49 @@ We then annotate the sentiments of the aspect term and opinion term pairs in the
 
 Note that, in our ASOTE datasets, triplets belonging to different aspect terms in the same sentence are in different json lines.
 
-# Requirements
+# Our Models
+## Requirements
 - Python 3.6.8
 - torch==1.2.0
 - pytorch-transformers==1.1.0
 - allennlp==0.9.0
 
-# Instructions:
+## Instructions:
 Before excuting the following commands, replace glove.840B.300d.txt(http://nlp.stanford.edu/data/wordvecs/glove.840B.300d.zip), bert-base-uncased.tar.gz(https://s3.amazonaws.com/models.huggingface.co/bert/bert-base-uncased.tar.gz) and vocab.txt(https://s3.amazonaws.com/models.huggingface.co/bert/bert-base-uncased-vocab.txt) with the corresponding absolute paths in your computer. 
 
-# ATE
+## ATE
 scripts/ate.sh
 
-# TOWE
+## TOWE
 scripts/towe.sh
 
-# TOWE inference
+## TOWE inference
 scripts/towe.predic.sh
 
-# AOSC
+## AOSC
 scripts/tosc.sh
 
-# U-ASO
+## U-ASO
 scripts/towe_tosc_jointly.sh
 
-# U-ASO inference
+## U-ASO inference
 scripts/towe_tosc_jointly.predict.sh
 
-# MIL-ASO
+## MIL-ASO
 scripts/mil_aso.sh
 
-# MIL-ASO inference
+## MIL-ASO inference
 scripts/mil_aso.predict.sh
 
-# evaluate
+## evaluate
 scripts/evaluate.sh
+
+# Citation
+```text
+@article{wang2021more,
+  title={A More Fine-Grained Aspect-Sentiment-Opinion Triplet Extraction Task},
+  author={Wang, Fang and Li, Yuncong and Zhang, Wenjun and Zhong, Sheng-hua},
+  journal={arXiv preprint arXiv:2103.15255},
+  year={2021}
+}
+```
