@@ -21,6 +21,7 @@ We will evaluate the performances of other models on the ASOTE task:
 - more models...
 
 # Data
+## Dataset Construction
 We build four datasets for the ASOTE task: [14res](ASOTE-data/absa/ASOTE/rest14), [14lap](ASOTE-data/absa/ASOTE/lapt14), [15res](ASOTE-data/absa/ASOTE/rest15), [16res](ASOTE-data/absa/ASOTE/rest16). 
 
 Specifically, we first construct four ASTE datasets by merging four ATSA datasets from three SemEval tasks ([SemEval-2014 Task 4](https://alt.qcri.org/semeval2014/task4/), [SemEval-2015 Task 12](https://alt.qcri.org/semeval2015/task12/), [SemEval-2016 Task 5](https://alt.qcri.org/semeval2016/task5/)) and four [TOWE datasets](https://www.aclweb.org/anthology/N19-1259.pdf) like [Knowing What, How and Why: A Near Complete Solution for Aspect-based Sentiment Analysis](https://arxiv.org/abs/1911.01616), then manually annotate the sentiment of the aspect and opinion pair in the ASTE datasets. 
@@ -145,6 +146,18 @@ We then annotate the sentiments of the aspect term and opinion term pairs in the
 ```
 
 Note that, in our ASOTE datasets, triplets belonging to different aspect terms in the same sentence are in different json lines.
+
+## Is it necessary to annotate the sentiments of the aspect term and opinion term pairs in the ASTE datasets for obtaining our ASOTE datasets?
+Wang et al. ([2016](https://www.aclweb.org/anthology/D16-1059.pdf), [2017](https://www.aaai.org/Conferences/AAAI/2017/PreliminaryPapers/15-Wang-W-14441.pdf)) have annotated the opinions and thier sentiments of the sentences in the restaurant and laptop datasets from [SemEval-2014 Task 4](https://alt.qcri.org/semeval2014/task4/) and the restaurant dataset from [SemEval-2015 Task 12](https://alt.qcri.org/semeval2015/task12/). Is it necessary to annotate the sentiments of the aspect term and opinion term pairs in the ASTE datasets for obtaining our ASOTE datasets? The answer is yes. The reasons are as follows:
+- The sentiments of aspect term and opinion term pairs are different from the sentiments of opinions.
+- Wang et al. ([2016](https://www.aclweb.org/anthology/D16-1059.pdf), [2017](https://www.aaai.org/Conferences/AAAI/2017/PreliminaryPapers/15-Wang-W-14441.pdf)) only annotated the opinions with positive sentiments or negative sentiments. That is, the opinions with neutral sentiments were not annotated. 
+- The opinions annotated by Wang et al. ([2016](https://www.aclweb.org/anthology/D16-1059.pdf), [2017](https://www.aaai.org/Conferences/AAAI/2017/PreliminaryPapers/15-Wang-W-14441.pdf)) are different from the opinions annotated in the [TOWE datasets](https://www.aclweb.org/anthology/N19-1259.pdf) which are used to construct our ASOTE datasets. For example, given this sentence, "those rolls were big , but not good and sashimi wasn't fresh.", the opinions and their sentiments annotated by Wang et al. ([2016](https://www.aclweb.org/anthology/D16-1059.pdf), [2017](https://www.aaai.org/Conferences/AAAI/2017/PreliminaryPapers/15-Wang-W-14441.pdf)) are big +1, good +1, and fresh +1 (+1 indicates positive sentiment), while the opinions annotated in the [TOWE datasets](https://www.aclweb.org/anthology/N19-1259.pdf) are "big", "not good" and "wasn't fresh". We think the opinions annotated in the [TOWE datasets](https://www.aclweb.org/anthology/N19-1259.pdf) are more appropriate for aspect-sentiment-opinion triplets.
+
+The [TOWE datasets](https://www.aclweb.org/anthology/N19-1259.pdf) al
+
+The Datasets provided by Wang et al. ([2016](https://www.aclweb.org/anthology/D16-1059.pdf), [2017](https://www.aaai.org/Conferences/AAAI/2017/PreliminaryPapers/15-Wang-W-14441.pdf)) can be found here:
+- [Recursive-Neural-Conditional-Random-Field](https://github.com/happywwy/Recursive-Neural-Conditional-Random-Field)
+- [Coupled-Multi-layer-Attentions](https://github.com/happywwy/Coupled-Multi-layer-Attentions)
 
 # Our Models
 ## Requirements
