@@ -13,7 +13,7 @@ In the third sentence, the negative sentiment toward the aspect term “food” 
 
 # Data
 ## Dataset Construction
-We build four datasets for the ASOTE task: [14res](ASOTE-data/absa/ASOTE/rest14), [14lap](ASOTE-data/absa/ASOTE/lapt14), [15res](ASOTE-data/absa/ASOTE/rest15), [16res](ASOTE-data/absa/ASOTE/rest16). 
+We build four datasets for the ASOTE task: 14res, 14lap, 15res, 16res. 
 
 Specifically, we first construct four ASTE datasets by merging four ATSA datasets from three SemEval tasks ([SemEval-2014 Task 4](https://alt.qcri.org/semeval2014/task4/), [SemEval-2015 Task 12](https://alt.qcri.org/semeval2015/task12/), [SemEval-2016 Task 5](https://alt.qcri.org/semeval2016/task5/)) and four [TOWE datasets](https://www.aclweb.org/anthology/N19-1259.pdf) like [Knowing What, How and Why: A Near Complete Solution for Aspect-based Sentiment Analysis](https://arxiv.org/abs/1911.01616), then manually annotate the sentiment of the aspect and opinion pair in the ASTE datasets. 
 
@@ -138,6 +138,18 @@ We then annotate the sentiments of the aspect term and opinion term pairs in the
 
 Note that, in our ASOTE datasets, triplets belonging to different aspect terms in the same sentence are in different json lines.
 
+## Data version
+### v1
+[14res](ASOTE-data/absa/ASOTE/rest14), [14lap](ASOTE-data/absa/ASOTE/lapt14), [15res](ASOTE-data/absa/ASOTE/rest15), [16res](ASOTE-data/absa/ASOTE/rest16)
+
+The v1 datasets only includes sentences which contain at least one aspect term.
+
+### v2
+[14res](ASOTE-data/absa/ASOTE-v2/rest14), [14lap](ASOTE-data/absa/ASOTE-v2/lapt14), [15res](ASOTE-data/absa/ASOTE-v2/rest15), [16res](ASOTE-data/absa/ASOTE-v2/rest16)
+
+The v2 datasets includes both sentences which contain aspect terms and sentences which do not contain aspect terms. That is, the v2 datasets include all sentences in the corresponding ATSA datasets from the three SemEval tasks ([SemEval-2014 Task 4](https://alt.qcri.org/semeval2014/task4/), [SemEval-2015 Task 12](https://alt.qcri.org/semeval2015/task12/), [SemEval-2016 Task 5](https://alt.qcri.org/semeval2016/task5/)). For example, although the sentence, "It gets very crowded so I would suggest that you get their early .", do not contain aspect terms, it also is included in the v2 datasets. We think datasets including these sentences can better evaluate the performance of methods, since methods can encounter this kind of sentences in real-world scenarios. The statistcs of the v2 datasets are as follows:
+![statistcs_of_the_v2_datasets](./figures/ASOTE-v2-statistics.png)
+
 ## Is it necessary to annotate the sentiments of the aspect term and opinion term pairs in the ASTE datasets for obtaining our ASOTE datasets?
 Wang et al. ([2016](https://www.aclweb.org/anthology/D16-1059.pdf), [2017](https://www.aaai.org/Conferences/AAAI/2017/PreliminaryPapers/15-Wang-W-14441.pdf)) have annotated the opinions and thier sentiments of the sentences in the restaurant and laptop datasets from [SemEval-2014 Task 4](https://alt.qcri.org/semeval2014/task4/) and the restaurant dataset from [SemEval-2015 Task 12](https://alt.qcri.org/semeval2015/task12/). Is it necessary to annotate the sentiments of the aspect term and opinion term pairs in the ASTE datasets for obtaining our ASOTE datasets? The answer is yes. The reasons are as follows:
 - The sentiments of aspect term and opinion term pairs are different from the sentiments of opinions.
@@ -193,6 +205,14 @@ scripts/mil_aso.predict.sh
 
 ## evaluate
 scripts/evaluate.sh
+
+# Experiment
+
+# Results on v1
+The Results on v1 are reported [here](https://arxiv.org/abs/2103.15255).
+
+# Results on v2
+![Results_on_v2](./figures/ASOTE-v2-exp.png)
 
 # Citation
 ```text
