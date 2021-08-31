@@ -15,7 +15,7 @@ from nlp_tasks.utils import my_corenlp
 
 class BaseTokenizer:
     """
-    分词器基类
+
     """
 
     def __init__(self, word_processor=word_processor.BaseWordProcessor()):
@@ -68,7 +68,7 @@ class BaseTokenizer:
 
 class JiebaTokenizer(BaseTokenizer):
     """
-    jieba分词器
+    jieba
     """
 
     def __init__(self, word_processor=word_processor.BaseWordProcessor()):
@@ -82,7 +82,7 @@ class JiebaTokenizer(BaseTokenizer):
 
 class AllennlpBertTokenizer(BaseTokenizer):
     """
-    jieba分词器
+    jieba
     """
 
     def __init__(self, bert_vocab_file_path, word_processor=word_processor.BaseWordProcessor()):
@@ -98,7 +98,7 @@ class AllennlpBertTokenizer(BaseTokenizer):
 
 class NltkTokenizer(BaseTokenizer):
     """
-    jieba分词器
+    jieba
     """
 
     def __init__(self, word_processor=word_processor.BaseWordProcessor()):
@@ -112,7 +112,7 @@ class NltkTokenizer(BaseTokenizer):
 
 class StanfordTokenizer(BaseTokenizer):
     """
-    jieba分词器
+    jieba
     """
 
     def __init__(self, word_processor=word_processor.BaseWordProcessor(), lang='en',
@@ -131,7 +131,7 @@ class StanfordTokenizer(BaseTokenizer):
 
 class SpacyTokenizer(BaseTokenizer):
     """
-    jieba分词器
+    jieba
     """
 
     def __init__(self, word_processor=word_processor.BaseWordProcessor()):

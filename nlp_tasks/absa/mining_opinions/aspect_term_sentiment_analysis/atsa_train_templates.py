@@ -291,7 +291,7 @@ class SpanBasedModelForAtsa(ModelTrainTemplate.ModelTrainTemplate):
             serialization_dir=self.model_dir,
             patience=self.configuration['patience'],
             callbacks=callbacks,
-            num_serialized_models_to_keep=2,
+            num_serialized_models_to_keep=0,
             early_stopping_by_batch=self.configuration['early_stopping_by_batch'],
             estimator=estimator,
             grad_clipping=5
@@ -359,8 +359,8 @@ class SpanBasedModelForAtsa(ModelTrainTemplate.ModelTrainTemplate):
                     continue
                 data.append(instance)
                 # text = instance.fields['sample'].metadata['text']
-                # # i love the keyboard and the screen. 都预测正确(来自测试集)
-                # # The best thing about this laptop is the price along with some of the newer features. 来自训练集 都正确
+                # # i love the keyboard and the screen. ()
+                # # The best thing about this laptop is the price along with some of the newer features.
                 # if 'that any existing MagSafe' in text:
                 #     data.append(instance)
                 #     break
@@ -404,8 +404,8 @@ class SpanBasedModelForAtsa(ModelTrainTemplate.ModelTrainTemplate):
                 data = []
                 for instance in data_temp:
                     text = instance.fields['sample'].metadata['text']
-                    # i love the keyboard and the screen. 都预测正确(来自测试集)
-                    # The best thing about this laptop is the price along with some of the newer features. 来自训练集 都正确
+                    # i love the keyboard and the screen. ()
+                    # The best thing about this laptop is the price along with some of the newer features.
                     if sentence in text:
                         data.append(instance)
                 result = predictor.predict(data)

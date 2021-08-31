@@ -125,7 +125,7 @@ class SpanBasedModel(Model):
             output['mask'] = sentiment_mask
             output['loss'] = loss
 
-        # 可视化，用模型对每个词进行情感预测，看看预测结果
+        # ，，
         if self.configuration['visualize_attention']:
             for i in range(len(sample)):
                 words = sample[i]['words']
@@ -300,7 +300,188 @@ class SpanBasedBertModelForTOSC(Model):
             output['mask'] = sentiment_mask
             output['loss'] = loss
 
-        # 可视化，用模型对每个词进行情感预测，看看预测结果
+        # ，，
+        if self.configuration['visualize_attention']:
+            for i in range(len(sample)):
+                words = sample[i]['words']
+                word_representations = []
+                for j in range(len(words)):
+                    word_representations.append(lstm_result[i][j])
+                prediction_of_words = [self.sentiment_fc(word_representation) for word_representation in word_representations]
+                prediction_of_words = [torch.softmax(prediction, dim=-1).detach().numpy() for prediction in prediction_of_words]
+
+                titles_sentiment = []
+                title_array = []
+                for j, aspect_term in enumerate(sample[i]['aspect_terms']):
+                    term = aspect_term.term
+                    polarity = aspect_term.polarity
+                    prediction_of_term = torch.softmax(sentiment_outputs_cat[i][j], dim=-1).detach().numpy()
+                    title_array.append(term)
+                    title_array.append(polarity)
+                    title_array.append(str(prediction_of_term))
+                title_array.append(str(self.polarites))
+                titles_sentiment.append('-'.join(title_array))
+                titles_sentiment.extend([''] * 2)
+                labels_sentiment = []
+                visual_sentiment = []
+                for k in range(self.polarity_num):
+                    labels_sentiment.append(self.polarites[k])
+                    visual_sentiment.append([prediction[k] for prediction in prediction_of_words])
+                attention_visualizer.plot_multi_attentions_of_sentence(words, visual_sentiment,
+                                                                       labels_sentiment,
+                                                                       titles_sentiment)
+
+
+        return output
+
+    def get_metrics(self, reset: bool = False) -> Dict[str, float]:
+        metrics = {
+            'accuracy': self._accuracy.get_metric(reset)
+        }
+        return metrics
+
+
+class SpanBasedBertWithPositionModelForTOSC(Model):
+    def __init__(self, word_embedder: TextFieldEmbedder, position_embedder: TextFieldEmbedder,
+                 polarities: list, vocab: Vocabulary, configuration: dict, bert_word_embedder: TextFieldEmbedder=None):
+        super().__init__(vocab)
+        self.configuration = configuration
+        self.word_embedder = word_embedder
+        self.position_embedder = position_embedder
+        self.bert_word_embedder = bert_word_embedder
+        self.polarites = polarities
+        self.polarity_num = len(polarities)
+        self.sentiment_loss = nn.CrossEntropyLoss()
+        self._accuracy = metrics.CategoricalAccuracy()
+
+        word_embedding_dim = bert_word_embedder.get_output_dim()
+        lstm_input_size = word_embedding_dim
+        num_layers = self.configuration['layer_number_of_lstm']
+        self.lstm = torch.nn.LSTM(lstm_input_size, int(word_embedding_dim / 2), batch_first=True,
+                                  bidirectional=True, num_layers=num_layers, dropout=0.5)
+        sentiment_fc_input_size = word_embedding_dim
+        self.sentiment_fc = nn.Sequential(nn.Linear(sentiment_fc_input_size, sentiment_fc_input_size),
+                                          nn.ReLU(),
+                                          nn.Linear(sentiment_fc_input_size, self.polarity_num))
+        self.dropout_after_embedding_layer = nn.Dropout(0.5)
+        self.dropout_after_lstm_layer = nn.Dropout(0.5)
+
+    def get_bert_embedding(self, bert, sample, word_embeddings_size, position_ids):
+        bert_mask = bert['mask']
+        token_type_ids = bert['bert-type-ids']
+        offsets = bert['bert-offsets']
+        bert_word_embeddings = self.bert_word_embedder(bert,
+                                                       token_type_ids=token_type_ids,
+                                                       offsets=offsets,
+                                                       position_ids=position_ids.long())
+
+        aspect_word_embeddings_from_bert = []
+        for j in range(len(sample)):
+            aspect_word_embeddings_from_bert_of_one_sample = []
+            all_word_indices_in_bert = sample[j]['word_index_and_bert_indices']
+            for k in range(word_embeddings_size[1]):
+                is_index_greater_than_max_len = False
+                if k in all_word_indices_in_bert:
+                    for index in all_word_indices_in_bert[k]:
+                        if index >= self.configuration['max_len']:
+                            is_index_greater_than_max_len = True
+                            break
+                if not is_index_greater_than_max_len and k in all_word_indices_in_bert:
+                    word_indices_in_bert = all_word_indices_in_bert[k]
+                    word_bert_embeddings = []
+                    for word_index_in_bert in word_indices_in_bert:
+                        word_bert_embedding = bert_word_embeddings[j][word_index_in_bert]
+                        word_bert_embeddings.append(word_bert_embedding)
+                    if len(word_bert_embeddings) == 0:
+                        print()
+                    if len(word_bert_embeddings) > 1:
+                        word_bert_embeddings_unsqueeze = [torch.unsqueeze(e, dim=0) for e in word_bert_embeddings]
+                        word_bert_embeddings_cat = torch.cat(word_bert_embeddings_unsqueeze, dim=0)
+                        word_bert_embeddings_sum = torch.sum(word_bert_embeddings_cat, dim=0)
+                        word_bert_embeddings_ave = word_bert_embeddings_sum / len(word_bert_embeddings)
+                    else:
+                        word_bert_embeddings_ave = word_bert_embeddings[0]
+                    aspect_word_embeddings_from_bert_of_one_sample.append(
+                        torch.unsqueeze(word_bert_embeddings_ave, 0))
+                else:
+                    zero = torch.zeros_like(torch.unsqueeze(bert_word_embeddings[0][0], 0))
+                    aspect_word_embeddings_from_bert_of_one_sample.append(zero)
+            aspect_word_embeddings_from_bert_of_one_sample_cat = torch.cat(
+                aspect_word_embeddings_from_bert_of_one_sample, dim=0)
+            aspect_word_embeddings_from_bert.append(
+                torch.unsqueeze(aspect_word_embeddings_from_bert_of_one_sample_cat, dim=0))
+        aspect_word_embeddings_from_bert_cat = torch.cat(aspect_word_embeddings_from_bert, dim=0)
+        return aspect_word_embeddings_from_bert_cat
+
+    def forward(self, tokens: Dict[str, torch.Tensor], label: torch.Tensor, position: torch.Tensor, bert_position: torch.Tensor,
+                polarity_mask: torch.Tensor, sample: list, bert: torch.Tensor=None) -> torch.Tensor:
+        mask = get_text_field_mask(tokens)
+        word_embeddings = self.word_embedder(tokens)
+        word_embeddings_size = word_embeddings.size()
+        word_embeddings = self.get_bert_embedding(bert,
+                                                  sample,
+                                                  word_embeddings_size,
+                                                  bert_position)
+
+        word_embeddings = self.dropout_after_embedding_layer(word_embeddings)
+
+        lstm_result, _ = self.lstm(word_embeddings)
+        lstm_result = self.dropout_after_lstm_layer(lstm_result)
+
+        sentiment_outputs = []
+        for i, element in enumerate(sample):
+            sentiment_output_of_one_sample = []
+            word_indices_of_aspect_terms = element['word_indices_of_aspect_terms']
+            for j in range(self.configuration['max_aspect_term_num']):
+                if j < len(word_indices_of_aspect_terms):
+                    word_indices_of_aspect_term = word_indices_of_aspect_terms[j]
+                    start_index = word_indices_of_aspect_term[0]
+                    end_index = word_indices_of_aspect_term[1]
+                    word_representations = lstm_result[i][start_index: end_index]
+                    aspect_term_word_num = end_index - start_index
+                    if aspect_term_word_num > 1:
+                        aspect_term_representation = torch.sum(word_representations, dim=0) / len(word_representations)
+                        aspect_term_representation = aspect_term_representation.unsqueeze(0)
+                    else:
+                        aspect_term_representation = word_representations
+                else:
+                    aspect_term_representation = lstm_result[i][-1].unsqueeze(0)
+                sentiment_output_of_one_sample.append(self.sentiment_fc(aspect_term_representation))
+            sentiment_output_of_one_sample_cat = torch.cat(sentiment_output_of_one_sample, dim=0)
+            sentiment_outputs.append(sentiment_output_of_one_sample_cat.unsqueeze(0))
+        sentiment_outputs_cat = torch.cat(sentiment_outputs, dim=0)
+
+        output = {}
+        if label is not None:
+            final_sentiment_outputs = []
+            polarity_labels = []
+            polarity_masks = []
+            for i in range(self.configuration['max_aspect_term_num']):
+                final_sentiment_outputs.append(sentiment_outputs_cat[:, i])
+                polarity_labels.append(label[:, i])
+                polarity_masks.append(polarity_mask[:, i])
+
+            output['final_sentiment_outputs'] = final_sentiment_outputs
+            output['polarity_labels'] = polarity_labels
+            output['polarity_masks'] = polarity_masks
+
+            # sentiment accuracy
+            sentiment_logit = torch.cat(final_sentiment_outputs)
+            sentiment_label = torch.cat(polarity_labels)
+            sentiment_mask = torch.cat(polarity_masks)
+
+            loss = self.sentiment_loss(sentiment_logit, sentiment_label.long())
+            if torch.isnan(loss):
+                print()
+
+            self._accuracy(sentiment_logit, sentiment_label, sentiment_mask)
+
+            output['logit'] = sentiment_logit
+            output['label'] = sentiment_label
+            output['mask'] = sentiment_mask
+            output['loss'] = loss
+
+        # ，，
         if self.configuration['visualize_attention']:
             for i in range(len(sample)):
                 words = sample[i]['words']
@@ -433,7 +614,7 @@ class SpanBasedBertModel(Model):
             output['mask'] = sentiment_mask
             output['loss'] = loss
 
-        # 可视化，用模型对每个词进行情感预测，看看预测结果
+        # ，，
         if self.configuration['visualize_attention']:
             for i in range(len(sample)):
                 words = sample[i]['words']
@@ -582,7 +763,7 @@ class AtsaBERT(Model):
             output['mask'] = sentiment_mask
             output['loss'] = loss
 
-        # 可视化，用模型对每个词进行情感预测，看看预测结果
+        # ，，
         if self.configuration['visualize_attention']:
             for i in range(len(sample)):
                 words = sample[i]['words']
@@ -636,7 +817,7 @@ class GatEdge:
     def add(self, other_edge: 'GatEdge'):
         """
 
-        :param other_edge:  同样的边
+        :param other_edge:
         :return:
         """
         if self.src_ids != other_edge.src_ids or self.dst_id != other_edge.dst_id:
@@ -701,7 +882,7 @@ class GATLayer(nn.Module):
         z = self.fc(feature)
         batched_graph.ndata['z'] = z
 
-        # 加入node id，用于attention可视化
+        # node id，attention
         node_ids = batched_graph.nodes()
         batched_graph.ndata['node_ids'] = node_ids
 
@@ -716,7 +897,7 @@ class GATLayer(nn.Module):
         output = [torch.unsqueeze(g.ndata.pop('h'), 0) for g in ug]
         output = torch.cat(output, 0)
 
-        # 对for_visualization按照sample进行拆分
+        # for_visualizationsample
         sample_num = len(g)
         node_num_per_sample = h.shape[1]
         edges_of_samples = [[] for _ in range(sample_num)]
@@ -818,7 +999,7 @@ class SyntaxAwareSpanBasedBertModel(Model):
         offsets = tokens['tokens-offsets']
         word_embeddings = self.word_embedder(tokens, token_type_ids=token_type_ids, offsets=offsets)
 
-        # 加图
+        #
         max_len = mask.size()[1]
         graphs = [e['graph'] for e in sample]
         graphs_padded = self.pad_dgl_graph(graphs, max_len)
@@ -883,7 +1064,7 @@ class SyntaxAwareSpanBasedBertModel(Model):
             output['mask'] = sentiment_mask
             output['loss'] = loss
 
-        # 可视化，用模型对每个词进行情感预测，看看预测结果
+        # ，，
         if self.configuration['visualize_attention']:
             for i in range(len(sample)):
                 words = sample[i]['words']

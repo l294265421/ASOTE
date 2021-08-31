@@ -560,7 +560,7 @@ class TextAspectInSentimentOutForSyntaxAwareBert(DatasetReader):
         words_of_pieces = []
         word_indices_of_aspect_terms = []
         start_index = 1
-        # 每个元素，[word，对应的word pieces开始index，对应的word pieces结束index]
+        # ，[word，word piecesindex，word piecesindex]
         word_and_word_pieces = []
         for i in range(len(pieces)):
             piece = pieces[i]

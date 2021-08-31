@@ -16,13 +16,13 @@ class PosConvert(object):
                  *args,
                  **kwargs)->int:
         """
-        位置转换
-        :param text: 文本
-        :param pos: 当文本是from_encoding时候的位置
-        :param encoding: 原始encoding
+
+        :param text:
+        :param pos: from_encoding
+        :param encoding: encoding
         :param args:
         :param kwargs:
-        :return: 当前text中实际的位置
+        :return: text
         """
         encode_text = text.encode(encoding)
 
@@ -33,7 +33,7 @@ class PosConvert(object):
 
 class NerPosRemote(object):
     """
-    命名实体识别 remote
+     remote
     """
 
     _URL = ""
@@ -90,7 +90,7 @@ class NerPosRemote(object):
 
 
 if __name__ == '__main__':
-    text = '华为一直说自己5G强运行快，但媒体实测连5G速度都不如三星'
+    text = '5G，5G'
     ner_pos = NerPosRemote()
     result = ner_pos(text)
     print(result)

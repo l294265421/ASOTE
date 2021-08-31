@@ -6,7 +6,7 @@ import re
 
 class ZhSplitStentence(object):
     """
-    句子切分
+
     """
 
     def __init__(self,
@@ -39,7 +39,7 @@ class ZhSplitStentence(object):
 
 class ZhSplitParagraph(object):
     """
-    段落
+
     """
 
     def __init__(self,

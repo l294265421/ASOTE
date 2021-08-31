@@ -14,12 +14,12 @@ def get_trained_count_and_tfidf_model(texts: list, tokenizer: tokenizers.BaseTok
     :return:
     """
     texts_tokenized = [' '.join(tokenizer(text)) for text in texts]
-    # 词频矩阵：矩阵元素a[i][j] 表示j词在i类文本下的词频
+    # ：a[i][j] ji
     count_model = sklearn_text.CountVectorizer()
     count_model.fit(texts_tokenized)
     freq_word_matrix = count_model.transform(texts_tokenized)
 
-    # 统计每个词语的tf-idf权值
+    # tf-idf
     tfidf_model = sklearn_text.TfidfTransformer()
     tfidf_model.fit(freq_word_matrix)
 
@@ -57,15 +57,15 @@ def to_tfidf_vectors(texts: list, tokenizer: tokenizers.BaseTokenizer()):
     """
 
     :param texts: list of str
-    :param tokenizer: 分词器
-    :return: 向量数组，每行一个对应一个text的向量化结果
+    :param tokenizer:
+    :return: ，text
     """
     texts_tokenized = [' '.join(tokenizer(text)) for text in texts]
-    # 词频矩阵：矩阵元素a[i][j] 表示j词在i类文本下的词频
+    # ：a[i][j] ji
     vectorizer = sklearn_text.CountVectorizer()
     freq_word_matrix = vectorizer.fit_transform(texts_tokenized)
 
-    # 统计每个词语的tf-idf权值
+    # tf-idf
     transformer = sklearn_text.TfidfTransformer()
     tfidf_matrix = transformer.fit_transform(freq_word_matrix)
 

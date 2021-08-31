@@ -45,6 +45,22 @@ def terms_from_tags(tags: List[str], words: List[str]):
     return term_with_texts
 
 
+def to_aspect_tags(aspect_term_dict: dict, words: List[str]):
+    """
+    aspect_term_dict only contains one aspect term
+    :param aspect_term_dict:
+    :param words:
+    :return:
+    """
+    tags = ['O' for _ in words]
+    start = aspect_term_dict['start']
+    end = aspect_term_dict['end']
+    tags[start] = 'B'
+    for i in range(start + 1, end):
+        tags[i] = 'I'
+    return tags
+
+
 if __name__ == '__main__':
     words = ['We', 'went', 'to', 'eat', 'at', 'the', 'Jekyll', 'and', 'Hyde', 'restaurant', 'on', 'Friday', 'night', 'and', 'really', 'enjoyed', 'the', 'fun', 'atmosphere', 'and', 'good', 'food', '.']
     tags = ['O', 'O', 'O', 'O', 'O', 'O', 'O', 'O', 'O', 'O', 'O', 'O', 'O', 'O', 'O', 'B', 'O', 'O', 'O', 'O', 'B', 'O', 'O']

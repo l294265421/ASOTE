@@ -41,8 +41,8 @@ logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 @TrainerBase.register("MyTrainer")
 class Trainer(TrainerBase):
     """
-    1. 支持每个epoch之后评估测试集 todo
-    2. 支持多任务的loss组合 todo
+    1. epoch todo
+    2. loss todo
     """
     def __init__(self,
                  model: Model,
@@ -56,7 +56,7 @@ class Trainer(TrainerBase):
                  shuffle: bool = True,
                  num_epochs: int = 20,
                  serialization_dir: Optional[str] = None,
-                 num_serialized_models_to_keep: int = 20,
+                 num_serialized_models_to_keep: int = 0,
                  keep_serialized_model_every_num_seconds: int = None,
                  checkpointer: Checkpointer = None,
                  model_save_interval: float = None,

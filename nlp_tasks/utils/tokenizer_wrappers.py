@@ -132,10 +132,3 @@ class TokenizerWithCustomWordSegmenter(keras_text_processor.Tokenizer):
             yield vect
 
 
-if __name__ == '__main__':
-    word_processor1 = word_processor.LowerProcessor()
-    word_segmenter = tokenizers.NltkTokenizer(word_processor=word_processor1)
-    keras_tokenizer = TokenizerWithCustomWordSegmenter(tokenizers.JiebaTokenizer())
-    keras_tokenizer.fit_on_texts(['我在深圳上班',
-                                  'Boot time is super fast, around anywhere from 35 seconds to 1 minute.'])
-    keras_tokenizer.texts_to_sequences()

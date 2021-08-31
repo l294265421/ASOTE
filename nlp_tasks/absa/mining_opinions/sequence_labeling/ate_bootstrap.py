@@ -15,6 +15,7 @@ from nlp_tasks.absa.mining_opinions.sequence_labeling import sequence_labeling_t
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--current_dataset', help='dataset name', default='RealASOTripletRest16', type=str)
+parser.add_argument('--version', help='dataset version', default='v2', type=str)
 parser.add_argument('--task_name', help='task name', default='ate', type=str)
 parser.add_argument('--data_type', help='data type', default='common', type=str)
 parser.add_argument('--model_name', help='model name', default='NerLstm', type=str)

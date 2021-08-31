@@ -20,16 +20,18 @@ from nlp_tasks.common import common_path
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--current_dataset', help='dataset name', default='ASOTEDataRest14', type=str)
+parser.add_argument('--version', help='dataset version', default='v2', type=str)
 parser.add_argument('--ate_result_filepath_template', help='ate result filepath',
-                    default=os.path.join(common_path.project_dir, 'ASOTE-data', 'absa', 'ASOTE-prediction-result', 'ATE', 'result_of_predicting_test.txt'), type=str)
+                    default=os.path.join(common_path.project_dir, 'AGF-ASOTE-data', 'absa', 'ASOTE-prediction-result', 'ATE', 'result_of_predicting_test.txt'), type=str)
 parser.add_argument('--so_result_filepath_template', help='triplet result filepath',
-                    default='', type=str)
+                    default=os.path.join(common_path.project_dir, 'AGF-ASOTE-data', 'absa', 'ASOTE-prediction-result', 'unified_tag', 'result_of_predicting_test.txt.add_predicted_aspect_term'), type=str)
+parser.add_argument('--debug', help='debug', default=False, type=argument_utils.my_bool)
 args = parser.parse_args()
 
 configuration = args.__dict__
 
 dataset_name = configuration['current_dataset']
-dataset = data_object.get_dataset_class_by_name(dataset_name)()
+dataset = data_object.get_dataset_class_by_name(dataset_name)(configuration)
 train_dev_test_data = dataset.get_data_type_and_data_dict()
 
 
@@ -217,8 +219,8 @@ def triplets_of_sentence(results_of_subtasks_of_sentence):
     results = set()
     for aspect_term_str in aspect_term_strs:
         sentiment = '-'
-        # 模型会对每个召回的aspect term预测情感，但是为了便于评估，我们只会预测ground truth aspect term的情感，所以用-指示错误的情感
-        # (假设，假设不存在的aspect term的情感一定是错的)
+        # aspect term，，ground truth aspect term，-
+        # (，aspect term)
         if aspect_term_str in aspect_term_str_and_sentiment:
             sentiment = aspect_term_str_and_sentiment[aspect_term_str]
 
@@ -299,9 +301,47 @@ def evaluate_asote(sentences_true, sentences_pred):
     true_triplet_num = 0
     pred_triplet_num = 0
     tp = 0
-    for sentence in sentences_true.keys():
+    for sentence in sentences_pred.keys():
         triplets_true = sentences_true[sentence]
         triplets_pred = sentences_pred[sentence]
+
+        true_triplet_num += len(triplets_true)
+        pred_triplet_num += len(triplets_pred)
+
+        for e in triplets_true:
+            if e in triplets_pred:
+                tp += 1
+    result = get_metrics(true_triplet_num, pred_triplet_num, tp)
+    return result
+
+
+def remove_sentiment(triplets: List[str]):
+    result = []
+    for e in triplets:
+        e = e.replace('_positive_', '_')
+        e = e.replace('_negative_', '_')
+        e = e.replace('_neutral_', '_')
+        e = e.replace('_-_', '_')
+        result.append(e)
+    return result
+
+
+def evaluate_ao_pair(sentences_true, sentences_pred):
+    """
+
+    :param sentences_true:
+    :param sentences_pred:
+    :return:
+    """
+    true_triplet_num = 0
+    pred_triplet_num = 0
+    tp = 0
+    for sentence in sentences_pred.keys():
+        triplets_true_temp = sentences_true[sentence]
+        triplets_pred_temp = sentences_pred[sentence]
+
+        triplets_true = remove_sentiment(triplets_true_temp)
+        triplets_pred = remove_sentiment(triplets_pred_temp)
 
         true_triplet_num += len(triplets_true)
         pred_triplet_num += len(triplets_pred)
@@ -365,28 +405,63 @@ def evaluate_atsa(sentences_true, sentences_pred):
     return result
 
 
-def evaluate_towe(sentences_true, sentences_pred):
+def sentence_triplets_to_sentence_aspect_and_opinions(sentence_triplets):
     """
 
-    :param sentences_true:
-    :param sentences_pred:
+    :param sentence_triplets:
     :return:
     """
+    result = defaultdict(list)
+    for sentence, triplets in sentence_triplets.items():
+        for triplet in triplets:
+            delimeter = '-'
+            if '_positive_' in triplet:
+                delimeter = '_positive_'
+            elif '_negative_' in triplet:
+                delimeter = '_negative_'
+            elif '_neutral_' in triplet:
+                delimeter = '_neutral_'
+            parts = triplet.split(delimeter)
+            key = '%s_%s' % (sentence, parts[0])
+            result[key].append(parts[1])
+    return result
+
+
+def evaluate_towe(so_pred):
+    """
+
+    :param so_pred:
+    :return:
+    """
+    sentences_true = {}
+    sentences_pred = {}
+    for e in so_pred:
+        e = json.loads(e)
+        sentence = ' '.join(e['words'])
+
+        aspect = aspect_term_dict_to_str(e['word_indices_of_aspect_terms'])
+        key = '%s_%s' % (sentence, aspect)
+        if key not in sentences_pred:
+            sentences_pred[key] = []
+            sentences_true[key] = []
+
+        for opinion in e['opinions']:
+            sentences_pred[key].append(aspect_term_dict_to_str(opinion))
+        for opinion in e['opinions_true']:
+            sentences_true[key].append(aspect_term_dict_to_str(opinion))
+
     true_aspect_opinion_num = 0
     pred_aspect_opinion_num = 0
     tp = 0
     for sentence in sentences_true.keys():
-        sentence_true = sentences_true[sentence]
-        sentence_pred = sentences_pred[sentence]
+        triplets_true = sentences_true[sentence]
+        triplets_pred = sentences_pred[sentence]
 
-        aspect_opinions_true = aspect_opinions_of_sentence(sentence_true)
-        aspect_opinions_pred = aspect_opinions_of_sentence(sentence_pred)
+        true_aspect_opinion_num += len(triplets_true)
+        pred_aspect_opinion_num += len(triplets_pred)
 
-        true_aspect_opinion_num += len(aspect_opinions_true)
-        pred_aspect_opinion_num += len(aspect_opinions_pred)
-
-        for e in aspect_opinions_true:
-            if e in aspect_opinions_pred:
+        for e in triplets_true:
+            if e in triplets_pred:
                 tp += 1
     result = get_metrics(true_aspect_opinion_num, pred_aspect_opinion_num, tp)
     return result
@@ -459,9 +534,16 @@ triplets_true = generate_subtasks_true(test_data)
 run_num = 5
 asote_metrics_of_multi_runs = []
 for i in range(run_num):
-    ate_result_filepath = args.ate_result_filepath_template % i
+    if args.debug:
+        ate_result_filepath = args.ate_result_filepath_template
+        triplet_result_filepath = args.so_result_filepath_template
+    else:
+        ate_result_filepath = args.ate_result_filepath_template % i
+        triplet_result_filepath = args.so_result_filepath_template % i
 
-    triplet_result_filepath = args.so_result_filepath_template % i
+    if not os.path.exists(ate_result_filepath):
+        print('not exist: %s' % ate_result_filepath)
+        continue
 
     if not os.path.exists(triplet_result_filepath):
         print('not exist: %s' % triplet_result_filepath)
@@ -476,3 +558,50 @@ for i in range(run_num):
 
 
 print_precision_recall_f1(asote_metrics_of_multi_runs, 'asote_metrics_of_multi_runs')
+
+print('-' * 100)
+asote_metrics_of_multi_runs = []
+for i in range(run_num):
+    if args.debug:
+        ate_result_filepath = args.ate_result_filepath_template
+        triplet_result_filepath = args.so_result_filepath_template
+    else:
+        ate_result_filepath = args.ate_result_filepath_template % i
+        triplet_result_filepath = args.so_result_filepath_template % i
+
+    if not os.path.exists(ate_result_filepath):
+        print('not exist: %s' % ate_result_filepath)
+        continue
+
+    if not os.path.exists(triplet_result_filepath):
+        print('not exist: %s' % triplet_result_filepath)
+        continue
+
+    ate_pred = read_ate_result(ate_result_filepath)
+    so_pred = file_utils.read_all_lines(triplet_result_filepath)
+
+    triplets_pred = get_sentence_and_triplets_pred(so_pred, ate_pred)
+
+    asote_metrics_of_multi_runs.append(evaluate_ao_pair(triplets_true, triplets_pred))
+
+
+print_precision_recall_f1(asote_metrics_of_multi_runs, 'ao_pair_metrics_of_multi_runs')
+
+print('-' * 100)
+asote_metrics_of_multi_runs = []
+for i in range(run_num):
+    if args.debug:
+        triplet_result_filepath = args.so_result_filepath_template[: -1 * len('.add_predicted_aspect_term')]
+    else:
+        triplet_result_filepath = args.so_result_filepath_template[: -1 * len('.add_predicted_aspect_term')] % i
+
+    if not os.path.exists(triplet_result_filepath):
+        print('not exist: %s' % triplet_result_filepath)
+        continue
+
+    so_pred = file_utils.read_all_lines(triplet_result_filepath)
+
+    asote_metrics_of_multi_runs.append(evaluate_towe(so_pred))
+
+
+print_precision_recall_f1(asote_metrics_of_multi_runs, 'towe_metrics_of_multi_runs')

@@ -178,6 +178,12 @@ class TextAspectInSentimentOutBertForTOSC(DatasetReader):
         bert_words = ['[CLS]']
         word_index_and_bert_indices = {}
         for i, word in enumerate(words):
+            if self.configuration['position_and_second_sentence']:
+                aspect_term_dict = sample['aspect_terms'][0].metadata['opinion']['aspect_term']
+                aspect_term_dict_start = aspect_term_dict['start']
+                aspect_term_dict_end = aspect_term_dict['end']
+                if aspect_term_dict_start <= i < aspect_term_dict_end:
+                    word = 'aspect'
             bert_ws = self.bert_tokenizer.tokenize(word.lower())
             word_index_and_bert_indices[i] = []
             for j in range(len(bert_ws)):
@@ -194,6 +200,185 @@ class TextAspectInSentimentOutBertForTOSC(DatasetReader):
         bert_text_field = TextField(bert_tokens, self.bert_token_indexers)
         fields['bert'] = bert_text_field
         sample['bert_words'] = bert_words
+        sample['word_index_and_bert_indices'] = word_index_and_bert_indices
+
+    @overrides
+    def text_to_instance(self, sample: list) -> Instance:
+        fields = {}
+
+        text: str = sample['text'].strip()
+        labels = sample['aspect_terms']
+
+        pieces = []
+        piece_labels = []
+        last_label_end_index = 0
+        for i, label in enumerate(labels):
+            if label.from_index != last_label_end_index:
+                pieces.append(text[last_label_end_index: label.from_index])
+                piece_labels.append(0)
+            pieces.append(text[label.from_index: label.to_index])
+            piece_labels.append(1)
+            last_label_end_index = label.to_index
+            if i == len(labels) - 1 and label.to_index != len(text):
+                pieces.append(text[label.to_index:])
+                piece_labels.append(0)
+
+        words_of_pieces = [self.tokenizer(piece.strip()) for piece in pieces]
+        word_indices_of_aspect_terms = []
+        start_index = 0
+        for i in range(len(words_of_pieces)):
+            words_of_piece = words_of_pieces[i]
+            end_index = start_index + len(words_of_piece)
+            if piece_labels[i] == 1:
+                word_indices_of_aspect_terms.append([start_index, end_index])
+            start_index = end_index
+        sample['word_indices_of_aspect_terms'] = word_indices_of_aspect_terms
+
+        words = []
+        for words_of_piece in words_of_pieces:
+            words.extend(words_of_piece)
+        sample['words'] = words
+        for i in range(len(word_indices_of_aspect_terms)):
+            start_index = word_indices_of_aspect_terms[i][0]
+            end_index = word_indices_of_aspect_terms[i][1]
+            aspect_term_text = ' '.join(words[start_index: end_index])
+
+        graph = self._build_graph(text)
+        sample['graph'] = graph
+
+        tokens = [Token(word) for word in words]
+
+        sentence_field = TextField(tokens, self.token_indexers)
+        fields['tokens'] = sentence_field
+
+        self.add_bert_words_and_word_index_bert_indices(words, fields, sample)
+
+        position = [Token(str(i)) for i in range(len(tokens))]
+        position_field = TextField(position, self.position_indexers)
+        fields['position'] = position_field
+        if self.configuration['sample_mode'] == 'single':
+            max_aspect_term_num = 1
+        else:
+            max_aspect_term_num = self.configuration['max_aspect_term_num']
+        polarity_labels = [-100] * max_aspect_term_num
+        for i, aspect_term in enumerate(sample['aspect_terms']):
+            polarity_labels[i] = self.polarities.index(aspect_term.polarity)
+        label_field = ArrayField(np.array(polarity_labels))
+        fields["label"] = label_field
+        polarity_mask = [1 if polarity_labels[i] != -100 else 0 for i in range(max_aspect_term_num)]
+        polarity_mask_field = ArrayField(np.array(polarity_mask))
+        fields['polarity_mask'] = polarity_mask_field
+
+        # stop_word_labels = [1 if word in english_stop_words else 0 for word in words]
+        # stop_word_num = sum(stop_word_labels)
+        # stop_word_labels = [label / stop_word_num for label in stop_word_labels]
+        # sample.append(stop_word_labels)
+
+        sample_field = MetadataField(sample)
+        fields["sample"] = sample_field
+        return Instance(fields)
+
+    @overrides
+    def _read(self, samples: list) -> Iterator[Instance]:
+        sample_mode = self.configuration['sample_mode']
+        if sample_mode == 'single':
+            for sample in samples:
+                for label in sample[1]:
+                    yield self.text_to_instance({'text': sample[0], 'aspect_terms': [label]})
+        elif sample_mode == 'multi':
+            for sample in samples:
+                yield self.text_to_instance({'text': sample[0], 'aspect_terms': sample[1]})
+        else:
+            raise NotImplementedError('sample model: %s' % sample_mode)
+
+
+class TextAspectInSentimentOutBertWithPositionForTOSC(DatasetReader):
+    def __init__(self, polarities: List[str],
+                 tokenizer: Callable[[str], List[str]] = lambda x: x.split(),
+                 token_indexers: Dict[str, TokenIndexer] = None,
+                 position_indexers: Dict[str, TokenIndexer] = None,
+                 core_nlp: my_corenlp.StanfordCoreNLP=None,
+                 configuration=None,
+                 bert_tokenizer=None,
+                 bert_token_indexers=None
+                 ) -> None:
+        super().__init__(lazy=False)
+        self.tokenizer = tokenizer
+        self.token_indexers = token_indexers or {"tokens": SingleIdTokenIndexer(namespace="tokens")}
+        self.position_indexers = position_indexers or {"position": SingleIdTokenIndexer(namespace='position')}
+        self.polarities = polarities
+        self.spacy_nlp = spacy.load("en_core_web_sm")
+        self.core_nlp = core_nlp
+        self.configuration = configuration
+        self.bert_tokenizer = bert_tokenizer
+        self.bert_token_indexers = bert_token_indexers or {"bert": SingleIdTokenIndexer(namespace="bert")}
+
+    def _build_graph(self, text):
+        graph = create_graph.create_dependency_graph_for_dgl(text, self.spacy_nlp, None)
+        return graph
+
+    def convert_to_relative_position(self, positions: List[int], aspect_positions: List[int]):
+        """
+
+        :param positions:
+        :param aspect_positions:
+        :return:
+        """
+        result = [index for index in range(len(positions))]
+        for i in result:
+            if i < aspect_positions[0]:
+                result[i] = aspect_positions[0] - i
+            elif i in aspect_positions:
+                result[i] = 0
+            else:
+                result[i] = i - aspect_positions[-1]
+        return result
+
+    def add_bert_words_and_word_index_bert_indices(self, words, fields, sample):
+        bert_words = ['[CLS]']
+        aspect_indices = []
+        word_index_and_bert_indices = {}
+        for i, word in enumerate(words):
+            if self.configuration['position_and_second_sentence']:
+                aspect_term_dict = sample['aspect_terms'][0].metadata['opinion']['aspect_term']
+                aspect_term_dict_start = aspect_term_dict['start']
+                aspect_term_dict_end = aspect_term_dict['end']
+                if aspect_term_dict_start <= i < aspect_term_dict_end:
+                    word = 'aspect'
+            bert_ws = self.bert_tokenizer.tokenize(word.lower())
+            word_index_and_bert_indices[i] = []
+            for j in range(len(bert_ws)):
+                word_index_and_bert_indices[i].append(len(bert_words) + j)
+
+                aspect_term_dict = sample['aspect_terms'][0].metadata['opinion']['aspect_term']
+                aspect_term_dict_start = aspect_term_dict['start']
+                aspect_term_dict_end = aspect_term_dict['end']
+                if aspect_term_dict_start <= i < aspect_term_dict_end:
+                    aspect_indices.append(len(bert_words) + j)
+            bert_words.extend(bert_ws)
+        bert_words.append('[SEP]')
+        bert_position = list(range(len(bert_words)))
+
+        if self.configuration['second_sentence']:
+            words_of_aspect_term = sample['aspect_terms'][0].metadata['opinion']['aspect_term']['term']
+            bert_words.extend(self.bert_tokenizer.tokenize(words_of_aspect_term.lower()))
+            bert_position.extend(aspect_indices + [aspect_indices[-1]] * (len(self.bert_tokenizer.tokenize(words_of_aspect_term.lower())) - len(aspect_indices)))
+
+            bert_words.append('[SEP]')
+            bert_position.append(len(bert_words) - 1)
+
+        if self.configuration['relative_position']:
+            bert_position = self.convert_to_relative_position(bert_position, aspect_indices)
+
+        bert_tokens = [Token(word) for word in bert_words]
+        bert_text_field = TextField(bert_tokens, self.bert_token_indexers)
+        fields['bert'] = bert_text_field
+
+        bert_position_field = ArrayField(np.array(bert_position), padding_value=len(bert_words))
+        fields['bert_position'] = bert_position_field
+
+        sample['bert_words'] = bert_words
+        sample['bert_position'] = bert_position
         sample['word_index_and_bert_indices'] = word_index_and_bert_indices
 
     @overrides
@@ -1026,7 +1211,7 @@ class TextAspectInSentimentOutForSyntaxAwareBert(DatasetReader):
         words_of_pieces = []
         word_indices_of_aspect_terms = []
         start_index = 1
-        # 每个元素，[word，对应的word pieces开始index，对应的word pieces结束index]
+        # ，[word，word piecesindex，word piecesindex]
         word_and_word_pieces = []
         for i in range(len(pieces)):
             piece = pieces[i]

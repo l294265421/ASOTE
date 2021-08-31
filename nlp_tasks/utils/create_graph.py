@@ -187,7 +187,7 @@ def create_aspect_term_dependency_graph(aspect_term_indices, polarity_indices, w
 
 def create_sentence_constituency_graph_for_dgl_with_dotted_line(tree: ConstituencyTreeNode):
     """
-    成分分析树中，内部节点与叶子节点没有直接相连时，也会加上虚线
+    ，，
     :param tree:
     :return:
     """

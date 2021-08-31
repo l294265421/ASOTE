@@ -11,11 +11,11 @@ from nlp_tasks.utils import http_utils
 
 def search(es_url, post_data, max_hits_needed=10, size=10):
     """
-    查询es
-    :param es_url: es地址
-    :param post_data: 查询请求post中的数据
-    :param max_hits_needed: 需要的最大数据量
-    :return: es查询结果的hits部分
+    es
+    :param es_url: es
+    :param post_data: post
+    :param max_hits_needed:
+    :return: eshits
     """
     url = es_url
     post_data_copy = copy.deepcopy(post_data)
@@ -34,18 +34,18 @@ def search(es_url, post_data, max_hits_needed=10, size=10):
             else:
                 es_from += size
         except Exception as e:
-            logging.error('查询es失败: %s' % traceback.format_exc())
+            logging.error('es: %s' % traceback.format_exc())
             break
     return result[: max_hits_needed]
 
 
 def search_by_scroll(es_url, post_data, index):
     """
-    查询es
-    :param es_url: es地址
-    :param post_data: 查询请求post中的数据
-    :param index: es的索引
-    :return: es查询结果的hits部分
+    es
+    :param es_url: es
+    :param post_data: post
+    :param index: es
+    :return: eshits
     """
     end_index = es_url.index(':', 5)
     es_url = es_url[: end_index + 5]
@@ -71,18 +71,18 @@ def search_by_scroll(es_url, post_data, index):
             if len(hits) < size:
                 break
         except Exception as e:
-            logging.error('查询es失败: %s' % traceback.format_exc())
+            logging.error('es: %s' % traceback.format_exc())
             break
     return result
 
 
 def search_esproxy_by_scroll(es_url, scroll_url_template, post_data, size):
     """
-    查询es
-    :param es_url: es地址
-    :param scroll_url_template: scroll时的地址
-    :param post_data: 查询请求post中的数据
-    :return: es查询结果的hits部分
+    es
+    :param es_url: es
+    :param scroll_url_template: scroll
+    :param post_data: post
+    :return: eshits
     """
     post_data_copy = copy.deepcopy(post_data)
     result = []
@@ -102,6 +102,6 @@ def search_esproxy_by_scroll(es_url, scroll_url_template, post_data, size):
             if len(hits) < size:
                 break
         except Exception as e:
-            logging.error('查询es失败: %s' % traceback.format_exc())
+            logging.error('es: %s' % traceback.format_exc())
             break
     return result

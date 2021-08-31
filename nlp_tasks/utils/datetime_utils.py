@@ -6,11 +6,11 @@ import datetime
 
 def parse_dates(start_time, end_time, datetime_format='%Y%m%d%H%M%S'):
     """
-    获得开始时间和结束时间之间的日期
-    :param start_time: str，时间范围起始时间（包含），比如20190129000008
-    :param end_time: str，时间范围结束时间（包含），比如20190131000008
-    :param datetime_format: str，日期字符串的格式，比如
-    :return: 开始时间和结束时间之间的日期
+
+    :param start_time: str，（），20190129000008
+    :param end_time: str，（），20190131000008
+    :param datetime_format: str，，
+    :return:
     """
     result = []
     start_time = datetime.datetime.strptime(start_time, datetime_format)
@@ -24,8 +24,8 @@ def parse_dates(start_time, end_time, datetime_format='%Y%m%d%H%M%S'):
 def now(date_format_str='%Y%m%d%H%M%S'):
     """
 
-    :param date_format_str: str, 时间格式化字符串
-    :return: 当前时间的字符串表示
+    :param date_format_str: str,
+    :return:
     """
     return datetime.datetime.now().strftime(date_format_str)
 
@@ -33,9 +33,9 @@ def now(date_format_str='%Y%m%d%H%M%S'):
 def day_ago(day_num, date_format_str='%Y%m%d%H%M%S'):
     """
 
-    :param day_num: 多少天
-    :param date_format_str: 时间格式
-    :return: 时间格式
+    :param day_num:
+    :param date_format_str:
+    :return:
     """
     now = datetime.datetime.now()
     ago = now - datetime.timedelta(days=day_num)
@@ -45,10 +45,10 @@ def day_ago(day_num, date_format_str='%Y%m%d%H%M%S'):
 def second_diff(start_time_str, end_time_str, date_format_str='%Y%m%d%H%M%S'):
     """
 
-    :param start_time_str: 开始时间
-    :param end_time_str: 结束时间
-    :param date_format_str: 时间格式
-    :return: 相差的秒数
+    :param start_time_str:
+    :param end_time_str:
+    :param date_format_str:
+    :return:
     """
     start_time = datetime.datetime.strptime(start_time_str, date_format_str)
     end_time = datetime.datetime.strptime(end_time_str, date_format_str)
@@ -60,10 +60,10 @@ def second_diff(start_time_str, end_time_str, date_format_str='%Y%m%d%H%M%S'):
 def day_diff(start_time_str, end_time_str, date_format_str='%Y%m%d'):
     """
 
-    :param start_time_str: 开始时间
-    :param end_time_str: 结束时间
-    :param date_format_str: 时间格式
-    :return: 相差的天数
+    :param start_time_str:
+    :param end_time_str:
+    :param date_format_str:
+    :return:
     """
     start_time = datetime.datetime.strptime(start_time_str, date_format_str)
     end_time = datetime.datetime.strptime(end_time_str, date_format_str)

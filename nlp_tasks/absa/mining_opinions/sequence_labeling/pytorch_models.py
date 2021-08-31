@@ -372,7 +372,7 @@ class TermBiLSTM(SequenceLabelingModel):
         self.feedforward = nn.Linear(self.hidden_size * 2, self.hidden_size * 2)
 
         if self.configuration['crf']:
-            # 序列标注方法BIO、BIOSE、IOB、BILOU、BMEWO、BMEWO+的异同 https://zhuanlan.zhihu.com/p/147537898
+            # BIO、BIOSE、IOB、BILOU、BMEWO、BMEWO+ https://zhuanlan.zhihu.com/p/147537898
             tagger_ner: CrfTagger = CrfTagger(vocab=vocab,
                                               output_dim=self.hidden_size * 2,
                                               label_namespace='opinion_words_tags',
@@ -463,7 +463,7 @@ class AsteTermBiLSTM(SequenceLabelingModel):
         self.feedforward = nn.Linear(self.hidden_size * 2, self.hidden_size * 2)
 
         if self.configuration['crf']:
-            # 序列标注方法BIO、BIOSE、IOB、BILOU、BMEWO、BMEWO+的异同 https://zhuanlan.zhihu.com/p/147537898
+            # BIO、BIOSE、IOB、BILOU、BMEWO、BMEWO+ https://zhuanlan.zhihu.com/p/147537898
             tagger_ner: CrfTagger = CrfTagger(vocab=vocab,
                                               output_dim=self.hidden_size * 2,
                                               label_namespace='opinion_words_tags',
@@ -598,7 +598,7 @@ class AsoTermBiLSTM(SequenceLabelingModel):
         self.feedforward = nn.Linear(self.hidden_size * 2, self.hidden_size * 2)
 
         if self.configuration['crf']:
-            # 序列标注方法BIO、BIOSE、IOB、BILOU、BMEWO、BMEWO+的异同 https://zhuanlan.zhihu.com/p/147537898
+            # BIO、BIOSE、IOB、BILOU、BMEWO、BMEWO+ https://zhuanlan.zhihu.com/p/147537898
             tagger_ner: CrfTagger = CrfTagger(vocab=vocab,
                                               output_dim=self.hidden_size * 2,
                                               label_namespace='opinion_words_tags',
@@ -683,7 +683,7 @@ class AsoTermBiLSTMBert(SequenceLabelingModel):
         self.feedforward = nn.Linear(self.hidden_size * 2, self.hidden_size * 2)
 
         if self.configuration['crf']:
-            # 序列标注方法BIO、BIOSE、IOB、BILOU、BMEWO、BMEWO+的异同 https://zhuanlan.zhihu.com/p/147537898
+            # BIO、BIOSE、IOB、BILOU、BMEWO、BMEWO+ https://zhuanlan.zhihu.com/p/147537898
             tagger_ner: CrfTagger = CrfTagger(vocab=vocab,
                                               output_dim=self.hidden_size * 2,
                                               label_namespace='opinion_words_tags',
@@ -791,6 +791,139 @@ class AsoTermBiLSTMBert(SequenceLabelingModel):
         return result
 
 
+class AsoTermBiLSTMBertWithPosition(SequenceLabelingModel):
+    def __init__(self, word_embedder: TextFieldEmbedder, position_embedder: TextFieldEmbedder,
+                 vocab: Vocabulary, configuration: dict, bert_word_embedder: TextFieldEmbedder=None):
+        super().__init__(vocab)
+        self.configuration = configuration
+
+        self.word_embedder = word_embedder
+        self.position_embedder = position_embedder
+        self.bert_word_embedder = bert_word_embedder
+
+        self.embedding_dim = self.bert_word_embedder.get_output_dim()
+        self.position_dim = self.position_embedder.get_output_dim()
+
+        if self.configuration['position']:
+            self.lstm_input_size = self.embedding_dim + self.position_dim
+        else:
+            self.lstm_input_size = self.embedding_dim
+        self.hidden_size = self.embedding_dim // 2
+        self.lstm = nn.LSTM(self.lstm_input_size, self.hidden_size,
+                            num_layers=1, bidirectional=True, batch_first=True)
+
+        self.feedforward = nn.Linear(self.hidden_size * 2, self.hidden_size * 2)
+
+        if self.configuration['crf']:
+            # BIO、BIOSE、IOB、BILOU、BMEWO、BMEWO+ https://zhuanlan.zhihu.com/p/147537898
+            tagger_ner: CrfTagger = CrfTagger(vocab=vocab,
+                                              output_dim=self.hidden_size * 2,
+                                              label_namespace='opinion_words_tags',
+                                              # label_encoding='BIO',
+                                              # constrain_crf_decoding=True,
+                                              dropout=None,
+                                              regularizer=None
+                                              )
+        else:
+            tagger_ner: SimpleTagger = SimpleTagger(vocab=vocab,
+                                                    output_dim=self.hidden_size * 2,
+                                                    label_namespace='opinion_words_tags',
+                                                    regularizer=None
+                                                    )
+        self._tagger_ner = tagger_ner
+
+        self.dropout = nn.Dropout(0.5)
+
+    def get_bert_embedding(self, bert, sample, word_embeddings_size, bert_position: torch.Tensor):
+        bert_mask = bert['mask']
+        token_type_ids = bert['bert-type-ids']
+        offsets = bert['bert-offsets']
+        bert_word_embeddings = self.bert_word_embedder(bert, token_type_ids=token_type_ids, offsets=offsets,
+                                                       position_ids=bert_position.long())
+
+        aspect_word_embeddings_from_bert = []
+        for j in range(len(sample)):
+            aspect_word_embeddings_from_bert_of_one_sample = []
+            all_word_indices_in_bert = sample[j]['word_index_and_bert_indices']
+            for k in range(word_embeddings_size[1]):
+                is_index_greater_than_max_len = False
+                if k in all_word_indices_in_bert:
+                    for index in all_word_indices_in_bert[k]:
+                        if index >= self.configuration['max_len']:
+                            is_index_greater_than_max_len = True
+                            break
+                if not is_index_greater_than_max_len and k in all_word_indices_in_bert:
+                    word_indices_in_bert = all_word_indices_in_bert[k]
+                    word_bert_embeddings = []
+                    for word_index_in_bert in word_indices_in_bert:
+                        word_bert_embedding = bert_word_embeddings[j][word_index_in_bert]
+                        word_bert_embeddings.append(word_bert_embedding)
+                    if len(word_bert_embeddings) == 0:
+                        print()
+                    if len(word_bert_embeddings) > 1:
+                        word_bert_embeddings_unsqueeze = [torch.unsqueeze(e, dim=0) for e in word_bert_embeddings]
+                        word_bert_embeddings_cat = torch.cat(word_bert_embeddings_unsqueeze, dim=0)
+                        word_bert_embeddings_sum = torch.sum(word_bert_embeddings_cat, dim=0)
+                        word_bert_embeddings_ave = word_bert_embeddings_sum / len(word_bert_embeddings)
+                    else:
+                        word_bert_embeddings_ave = word_bert_embeddings[0]
+                    aspect_word_embeddings_from_bert_of_one_sample.append(
+                        torch.unsqueeze(word_bert_embeddings_ave, 0))
+                else:
+                    zero = torch.zeros_like(torch.unsqueeze(bert_word_embeddings[0][0], 0))
+                    aspect_word_embeddings_from_bert_of_one_sample.append(zero)
+            aspect_word_embeddings_from_bert_of_one_sample_cat = torch.cat(
+                aspect_word_embeddings_from_bert_of_one_sample, dim=0)
+            aspect_word_embeddings_from_bert.append(
+                torch.unsqueeze(aspect_word_embeddings_from_bert_of_one_sample_cat, dim=0))
+        aspect_word_embeddings_from_bert_cat = torch.cat(aspect_word_embeddings_from_bert, dim=0)
+        return aspect_word_embeddings_from_bert_cat
+
+    def forward(self, tokens: Dict[str, torch.Tensor], position: torch.Tensor, bert_position: torch.Tensor, sample: list,
+                labels: torch.Tensor=None, polarity_label: torch.Tensor=None, bert: torch.Tensor=None) -> torch.Tensor:
+        embedded_text_input = self.word_embedder(tokens)
+        mask = util.get_text_field_mask(tokens)
+
+        word_embeddings_size = embedded_text_input.size()
+        embedded_text_input = self.get_bert_embedding(bert, sample, word_embeddings_size, bert_position)
+
+        if self.configuration['position']:
+            position_input = self.position_embedder(position)
+            lstm_input = torch.cat([embedded_text_input, position_input], dim=-1)
+        else:
+            lstm_input = embedded_text_input
+
+        lstm_input = self.dropout(lstm_input)
+
+        lstm_result, _ = self.lstm(lstm_input)
+        lstm_result = self.dropout(lstm_result)
+
+        encoded_text = self.feedforward(lstm_result)
+        encoded_text = self.dropout(encoded_text)
+
+        input_for_crf_tagger = {
+            'encoded_text': encoded_text,
+            'mask': mask,
+            'tags': labels,
+            'metadata': sample
+        }
+        so_result = self._tagger_ner.forward(**input_for_crf_tagger)
+        return so_result
+
+    def get_metrics(self, reset: bool = False) -> Dict[str, float]:
+        return self._tagger_ner.get_metrics(reset=reset)
+
+    @overrides
+    def decode(self, output_dict: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
+        """
+        Converts the tag ids to the actual tags.
+        ``output_dict["tags"]`` is a list of lists of tag_ids,
+        so we use an ugly nested list comprehension.
+        """
+        result = self._tagger_ner.decode(output_dict)
+        return result
+
+
 class WarmupSequenceLabelingModel(SequenceLabelingModel):
 
     def __init__(self, vocab: Vocabulary):
@@ -860,7 +993,7 @@ class AsteTermBiLSTMWithSLA(WarmupSequenceLabelingModel):
         self.feedforward = nn.Linear(self.hidden_size * 2, self.hidden_size * 2)
 
         if self.configuration['crf']:
-            # 序列标注方法BIO、BIOSE、IOB、BILOU、BMEWO、BMEWO+的异同 https://zhuanlan.zhihu.com/p/147537898
+            # BIO、BIOSE、IOB、BILOU、BMEWO、BMEWO+ https://zhuanlan.zhihu.com/p/147537898
             tagger_ner: CrfTagger = CrfTagger(vocab=vocab,
                                               output_dim=self.hidden_size * 2,
                                               label_namespace='opinion_words_tags',
@@ -1068,7 +1201,7 @@ class MILForASO(WarmupSequenceLabelingModel):
         self.feedforward = nn.Linear(self.hidden_size * 2, self.hidden_size * 2)
 
         if self.configuration['crf']:
-            # 序列标注方法BIO、BIOSE、IOB、BILOU、BMEWO、BMEWO+的异同 https://zhuanlan.zhihu.com/p/147537898
+            # BIO、BIOSE、IOB、BILOU、BMEWO、BMEWO+ https://zhuanlan.zhihu.com/p/147537898
             tagger_ner: CrfTagger = CrfTagger(vocab=vocab,
                                               output_dim=self.hidden_size * 2,
                                               label_namespace='opinion_words_tags',
@@ -1276,7 +1409,7 @@ class MILForASOBert(WarmupSequenceLabelingModel):
         self.feedforward = nn.Linear(self.hidden_size * 2, self.hidden_size * 2)
 
         if self.configuration['crf']:
-            # 序列标注方法BIO、BIOSE、IOB、BILOU、BMEWO、BMEWO+的异同 https://zhuanlan.zhihu.com/p/147537898
+            # BIO、BIOSE、IOB、BILOU、BMEWO、BMEWO+ https://zhuanlan.zhihu.com/p/147537898
             tagger_ner: CrfTagger = CrfTagger(vocab=vocab,
                                               output_dim=self.hidden_size * 2,
                                               label_namespace='opinion_words_tags',
@@ -1534,7 +1667,7 @@ class TermBert(SequenceLabelingModel):
         self.feedforward = nn.Linear(self.hidden_size * 2, self.hidden_size * 2)
 
         if self.configuration['crf']:
-            # 序列标注方法BIO、BIOSE、IOB、BILOU、BMEWO、BMEWO+的异同 https://zhuanlan.zhihu.com/p/147537898
+            # BIO、BIOSE、IOB、BILOU、BMEWO、BMEWO+ https://zhuanlan.zhihu.com/p/147537898
             tagger_ner: CrfTagger = CrfTagger(vocab=vocab,
                                               output_dim=self.hidden_size * 2,
                                               label_namespace='opinion_words_tags',
@@ -1648,6 +1781,291 @@ class TermBert(SequenceLabelingModel):
         return result
 
 
+class TermBertWithPosition(SequenceLabelingModel):
+    def __init__(self, word_embedder: TextFieldEmbedder, position_embedder: TextFieldEmbedder,
+                 vocab: Vocabulary, configuration: dict, bert_word_embedder: TextFieldEmbedder=None):
+        super().__init__(vocab)
+        self.configuration = configuration
+
+        self.word_embedder = word_embedder
+        self.bert_word_embedder = bert_word_embedder
+        self.position_embedder = position_embedder
+
+        self.embedding_dim = word_embedder.get_output_dim()
+        self.bert_embedding_dim = self.bert_word_embedder.get_output_dim()
+        self.position_dim = self.position_embedder.get_output_dim()
+
+        if self.configuration['position']:
+            self.lstm_input_size = self.bert_embedding_dim + self.position_dim
+        else:
+            self.lstm_input_size = self.bert_embedding_dim
+        self.hidden_size = self.bert_embedding_dim // 2
+        if self.configuration['lstm_layer_num_in_bert'] != 0:
+            self.lstm = nn.LSTM(self.lstm_input_size, self.hidden_size,
+                                num_layers=self.configuration['lstm_layer_num_in_bert'],
+                                bidirectional=True, batch_first=True)
+
+        self.feedforward = nn.Linear(self.hidden_size * 2, self.hidden_size * 2)
+
+        if self.configuration['crf']:
+            # BIO、BIOSE、IOB、BILOU、BMEWO、BMEWO+ https://zhuanlan.zhihu.com/p/147537898
+            tagger_ner: CrfTagger = CrfTagger(vocab=vocab,
+                                              output_dim=self.hidden_size * 2,
+                                              label_namespace='opinion_words_tags',
+                                              # label_encoding='BIO',
+                                              # constrain_crf_decoding=True,
+                                              dropout=None,
+                                              regularizer=None
+                                              )
+        else:
+            tagger_ner: SimpleTagger = SimpleTagger(vocab=vocab,
+                                                    output_dim=self.hidden_size * 2,
+                                                    label_namespace='opinion_words_tags',
+                                                    regularizer=None
+                                                    )
+        self._tagger_ner = tagger_ner
+
+        self.dropout = nn.Dropout(0.5)
+
+    def forward(self, tokens: Dict[str, torch.Tensor], position: torch.Tensor, bert_position: torch.Tensor, sample: list,
+                labels: torch.Tensor=None, bert: torch.Tensor=None) -> torch.Tensor:
+        embedded_text_input = self.word_embedder(tokens)
+        word_embeddings_size = embedded_text_input.size()
+        mask = util.get_text_field_mask(tokens)
+
+        bert_mask = bert['mask']
+        # bert_word_embeddings = self.bert_word_embedder(bert)
+        token_type_ids = bert['bert-type-ids']
+        # token_type_ids_size = token_type_ids.size()
+        # for i in range(token_type_ids_size[1]):
+        #     print(token_type_ids[0][i])
+        offsets = bert['bert-offsets']
+        bert_word_embeddings = self.bert_word_embedder(bert, token_type_ids=token_type_ids, offsets=offsets,
+                                                       position_ids=bert_position.long())
+
+        aspect_word_embeddings_from_bert = []
+        for j in range(len(sample)):
+            aspect_word_embeddings_from_bert_of_one_sample = []
+            all_word_indices_in_bert = sample[j]['word_index_and_bert_indices']
+            for k in range(word_embeddings_size[1]):
+                is_index_greater_than_max_len = False
+                if k in all_word_indices_in_bert:
+                    for index in all_word_indices_in_bert[k]:
+                        if index >= self.configuration['max_len']:
+                            is_index_greater_than_max_len = True
+                            break
+                if not is_index_greater_than_max_len and k in all_word_indices_in_bert:
+                    word_indices_in_bert = all_word_indices_in_bert[k]
+                    word_bert_embeddings = []
+                    for word_index_in_bert in word_indices_in_bert:
+                        word_bert_embedding = bert_word_embeddings[j][word_index_in_bert]
+                        word_bert_embeddings.append(word_bert_embedding)
+                    if len(word_bert_embeddings) == 0:
+                        print()
+                    if len(word_bert_embeddings) > 1:
+                        word_bert_embeddings_unsqueeze = [torch.unsqueeze(e, dim=0) for e in word_bert_embeddings]
+                        word_bert_embeddings_cat = torch.cat(word_bert_embeddings_unsqueeze, dim=0)
+                        word_bert_embeddings_sum = torch.sum(word_bert_embeddings_cat, dim=0)
+                        word_bert_embeddings_ave = word_bert_embeddings_sum / len(word_bert_embeddings)
+                    else:
+                        word_bert_embeddings_ave = word_bert_embeddings[0]
+                    aspect_word_embeddings_from_bert_of_one_sample.append(
+                        torch.unsqueeze(word_bert_embeddings_ave, 0))
+                else:
+                    zero = torch.zeros_like(torch.unsqueeze(bert_word_embeddings[0][0], 0))
+                    aspect_word_embeddings_from_bert_of_one_sample.append(zero)
+            aspect_word_embeddings_from_bert_of_one_sample_cat = torch.cat(
+                aspect_word_embeddings_from_bert_of_one_sample, dim=0)
+            aspect_word_embeddings_from_bert.append(
+                torch.unsqueeze(aspect_word_embeddings_from_bert_of_one_sample_cat, dim=0))
+        aspect_word_embeddings_from_bert_cat = torch.cat(aspect_word_embeddings_from_bert, dim=0)
+
+        if self.configuration['position']:
+            position_input = self.position_embedder(position)
+            lstm_input = torch.cat([aspect_word_embeddings_from_bert_cat, position_input], dim=-1)
+        else:
+            lstm_input = aspect_word_embeddings_from_bert_cat
+
+        lstm_input = self.dropout(lstm_input)
+
+        if self.configuration['lstm_layer_num_in_bert'] != 0:
+            lstm_result, _ = self.lstm(lstm_input)
+            lstm_result = self.dropout(lstm_result)
+        else:
+            lstm_result = lstm_input
+
+        lstm_result = self.dropout(lstm_result)
+
+        encoded_text = self.feedforward(lstm_result)
+        encoded_text = self.dropout(encoded_text)
+
+        input_for_crf_tagger = {
+            'encoded_text': encoded_text,
+            'mask': mask,
+            'tags': labels,
+            'metadata': sample
+        }
+        result = self._tagger_ner.forward(**input_for_crf_tagger)
+
+        return result
+
+    def get_metrics(self, reset: bool = False) -> Dict[str, float]:
+        return self._tagger_ner.get_metrics(reset=reset)
+
+    @overrides
+    def decode(self, output_dict: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
+        """
+        Converts the tag ids to the actual tags.
+        ``output_dict["tags"]`` is a list of lists of tag_ids,
+        so we use an ugly nested list comprehension.
+        """
+        result = self._tagger_ner.decode(output_dict)
+        return result
+
+
+class TermBiLSTMWithSecondSentence(SequenceLabelingModel):
+    def __init__(self, word_embedder: TextFieldEmbedder, position_embedder: TextFieldEmbedder,
+                 vocab: Vocabulary, configuration: dict, bert_word_embedder: TextFieldEmbedder=None):
+        super().__init__(vocab)
+        self.configuration = configuration
+
+        self.word_embedder = word_embedder
+        self.bert_word_embedder = bert_word_embedder
+        self.position_embedder = position_embedder
+
+        self.embedding_dim = word_embedder.get_output_dim()
+        # self.bert_embedding_dim = self.bert_word_embedder.get_output_dim()
+        self.bert_embedding_dim = self.embedding_dim
+        self.position_dim = self.position_embedder.get_output_dim()
+
+        if self.configuration['position']:
+            self.lstm_input_size = self.bert_embedding_dim + self.position_dim
+        else:
+            self.lstm_input_size = self.bert_embedding_dim
+        self.hidden_size = self.bert_embedding_dim // 2
+        if self.configuration['lstm_layer_num_in_bert'] != 0:
+            self.lstm = nn.LSTM(self.lstm_input_size, self.hidden_size,
+                                num_layers=self.configuration['lstm_layer_num_in_bert'],
+                                bidirectional=True, batch_first=True)
+
+        self.feedforward = nn.Linear(self.hidden_size * 2, self.hidden_size * 2)
+
+        if self.configuration['crf']:
+            # BIO、BIOSE、IOB、BILOU、BMEWO、BMEWO+ https://zhuanlan.zhihu.com/p/147537898
+            tagger_ner: CrfTagger = CrfTagger(vocab=vocab,
+                                              output_dim=self.hidden_size * 2,
+                                              label_namespace='opinion_words_tags',
+                                              # label_encoding='BIO',
+                                              # constrain_crf_decoding=True,
+                                              dropout=None,
+                                              regularizer=None
+                                              )
+        else:
+            tagger_ner: SimpleTagger = SimpleTagger(vocab=vocab,
+                                                    output_dim=self.hidden_size * 2,
+                                                    label_namespace='opinion_words_tags',
+                                                    regularizer=None
+                                                    )
+        self._tagger_ner = tagger_ner
+
+        self.dropout = nn.Dropout(0.5)
+
+    def forward(self, tokens: Dict[str, torch.Tensor], position: torch.Tensor, bert_position: torch.Tensor, sample: list,
+                labels: torch.Tensor=None, bert: torch.Tensor=None) -> torch.Tensor:
+        embedded_text_input = self.word_embedder(tokens)
+        word_embeddings_size = embedded_text_input.size()
+        mask = util.get_text_field_mask(tokens)
+
+        # bert_mask = bert['mask']
+        # # bert_word_embeddings = self.bert_word_embedder(bert)
+        # token_type_ids = bert['bert-type-ids']
+        # # token_type_ids_size = token_type_ids.size()
+        # # for i in range(token_type_ids_size[1]):
+        # #     print(token_type_ids[0][i])
+        # offsets = bert['bert-offsets']
+        # bert_word_embeddings = self.bert_word_embedder(bert, token_type_ids=token_type_ids, offsets=offsets,
+        #                                                position_ids=bert_position.long())
+
+        bert_word_embeddings = self.word_embedder(bert)
+
+        aspect_word_embeddings_from_bert = []
+        for j in range(len(sample)):
+            aspect_word_embeddings_from_bert_of_one_sample = []
+            all_word_indices_in_bert = sample[j]['word_index_and_bert_indices']
+            for k in range(word_embeddings_size[1]):
+                is_index_greater_than_max_len = False
+                if k in all_word_indices_in_bert:
+                    for index in all_word_indices_in_bert[k]:
+                        if index >= self.configuration['max_len']:
+                            is_index_greater_than_max_len = True
+                            break
+                if not is_index_greater_than_max_len and k in all_word_indices_in_bert:
+                    word_indices_in_bert = all_word_indices_in_bert[k]
+                    word_bert_embeddings = []
+                    for word_index_in_bert in word_indices_in_bert:
+                        word_bert_embedding = bert_word_embeddings[j][word_index_in_bert]
+                        word_bert_embeddings.append(word_bert_embedding)
+                    if len(word_bert_embeddings) == 0:
+                        print()
+                    if len(word_bert_embeddings) > 1:
+                        word_bert_embeddings_unsqueeze = [torch.unsqueeze(e, dim=0) for e in word_bert_embeddings]
+                        word_bert_embeddings_cat = torch.cat(word_bert_embeddings_unsqueeze, dim=0)
+                        word_bert_embeddings_sum = torch.sum(word_bert_embeddings_cat, dim=0)
+                        word_bert_embeddings_ave = word_bert_embeddings_sum / len(word_bert_embeddings)
+                    else:
+                        word_bert_embeddings_ave = word_bert_embeddings[0]
+                    aspect_word_embeddings_from_bert_of_one_sample.append(
+                        torch.unsqueeze(word_bert_embeddings_ave, 0))
+                else:
+                    zero = torch.zeros_like(torch.unsqueeze(bert_word_embeddings[0][0], 0))
+                    aspect_word_embeddings_from_bert_of_one_sample.append(zero)
+            aspect_word_embeddings_from_bert_of_one_sample_cat = torch.cat(
+                aspect_word_embeddings_from_bert_of_one_sample, dim=0)
+            aspect_word_embeddings_from_bert.append(
+                torch.unsqueeze(aspect_word_embeddings_from_bert_of_one_sample_cat, dim=0))
+        aspect_word_embeddings_from_bert_cat = torch.cat(aspect_word_embeddings_from_bert, dim=0)
+
+        if self.configuration['position']:
+            position_input = self.position_embedder(position)
+            lstm_input = torch.cat([aspect_word_embeddings_from_bert_cat, position_input], dim=-1)
+        else:
+            lstm_input = aspect_word_embeddings_from_bert_cat
+
+        lstm_input = self.dropout(lstm_input)
+
+        if self.configuration['lstm_layer_num_in_bert'] != 0:
+            lstm_result, _ = self.lstm(lstm_input)
+            lstm_result = self.dropout(lstm_result)
+        else:
+            lstm_result = lstm_input
+
+        encoded_text = self.feedforward(lstm_result)
+        encoded_text = self.dropout(encoded_text)
+
+        input_for_crf_tagger = {
+            'encoded_text': encoded_text,
+            'mask': mask,
+            'tags': labels,
+            'metadata': sample
+        }
+        result = self._tagger_ner.forward(**input_for_crf_tagger)
+
+        return result
+
+    def get_metrics(self, reset: bool = False) -> Dict[str, float]:
+        return self._tagger_ner.get_metrics(reset=reset)
+
+    @overrides
+    def decode(self, output_dict: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
+        """
+        Converts the tag ids to the actual tags.
+        ``output_dict["tags"]`` is a list of lists of tag_ids,
+        so we use an ugly nested list comprehension.
+        """
+        result = self._tagger_ner.decode(output_dict)
+        return result
+
+
 class AsteTermBert(SequenceLabelingModel):
     def __init__(self, word_embedder: TextFieldEmbedder, position_embedder: TextFieldEmbedder,
                  vocab: Vocabulary, configuration: dict, bert_word_embedder: TextFieldEmbedder=None):
@@ -1682,7 +2100,7 @@ class AsteTermBert(SequenceLabelingModel):
         self.feedforward = nn.Linear(self.hidden_size * 2, self.hidden_size * 2)
 
         if self.configuration['crf']:
-            # 序列标注方法BIO、BIOSE、IOB、BILOU、BMEWO、BMEWO+的异同 https://zhuanlan.zhihu.com/p/147537898
+            # BIO、BIOSE、IOB、BILOU、BMEWO、BMEWO+ https://zhuanlan.zhihu.com/p/147537898
             tagger_ner: CrfTagger = CrfTagger(vocab=vocab,
                                               output_dim=self.hidden_size * 2,
                                               label_namespace='opinion_words_tags',
@@ -1875,7 +2293,7 @@ class AsteTermBertWithSLA(WarmupSequenceLabelingModel):
         self.feedforward = nn.Linear(self.hidden_size * 2, self.hidden_size * 2)
 
         if self.configuration['crf']:
-            # 序列标注方法BIO、BIOSE、IOB、BILOU、BMEWO、BMEWO+的异同 https://zhuanlan.zhihu.com/p/147537898
+            # BIO、BIOSE、IOB、BILOU、BMEWO、BMEWO+ https://zhuanlan.zhihu.com/p/147537898
             tagger_ner: CrfTagger = CrfTagger(vocab=vocab,
                                               output_dim=self.hidden_size * 2,
                                               label_namespace='opinion_words_tags',
@@ -2147,7 +2565,7 @@ class NerLstm(SequenceLabelingModel):
         self.feedforward = nn.Linear(self.hidden_size * 2, self.hidden_size * 2)
 
         if self.configuration['crf']:
-            # 序列标注方法BIO、BIOSE、IOB、BILOU、BMEWO、BMEWO+的异同 https://zhuanlan.zhihu.com/p/147537898
+            # BIO、BIOSE、IOB、BILOU、BMEWO、BMEWO+ https://zhuanlan.zhihu.com/p/147537898
             tagger_ner: CrfTagger = CrfTagger(vocab=vocab,
                                               output_dim=self.hidden_size * 2,
                                               label_namespace='target_tags',
@@ -2234,7 +2652,7 @@ class NerBertForOTE(SequenceLabelingModel):
         self.feedforward = nn.Linear(self.hidden_size * 2, self.hidden_size * 2)
 
         if self.configuration['crf']:
-            # 序列标注方法BIO、BIOSE、IOB、BILOU、BMEWO、BMEWO+的异同 https://zhuanlan.zhihu.com/p/147537898
+            # BIO、BIOSE、IOB、BILOU、BMEWO、BMEWO+ https://zhuanlan.zhihu.com/p/147537898
             tagger_ner: CrfTagger = CrfTagger(vocab=vocab,
                                               output_dim=self.hidden_size * 2,
                                               label_namespace='target_tags',
@@ -2370,7 +2788,7 @@ class NerBert(SequenceLabelingModel):
         self.feedforward = nn.Linear(self.hidden_size * 2, self.hidden_size * 2)
 
         if self.configuration['crf']:
-            # 序列标注方法BIO、BIOSE、IOB、BILOU、BMEWO、BMEWO+的异同 https://zhuanlan.zhihu.com/p/147537898
+            # BIO、BIOSE、IOB、BILOU、BMEWO、BMEWO+ https://zhuanlan.zhihu.com/p/147537898
             tagger_ner: CrfTagger = CrfTagger(vocab=vocab,
                                               output_dim=self.hidden_size * 2,
                                               label_namespace='target_tags',
@@ -2914,7 +3332,8 @@ class ToweEstimator(Estimator):
         result = []
         for sample in samples:
             words = sample['words']
-            text = sample['metadata']['original_line'].split('####')[0]
+            # text = sample['metadata']['original_line'].split('####')[0]
+            text = sample['metadata']['original_line_data']['sentence']
             target_tags = sample['target_tags']
             opinion_words_tags = sample['opinion_words_tags']
             aspect_terms = self.terms_from_tags(target_tags, words)
@@ -2934,7 +3353,8 @@ class ToweEstimator(Estimator):
         for i in range(len(samples)):
             sample = samples[i]
             words = sample['words']
-            text = sample['metadata']['original_line'].split('####')[0]
+            # text = sample['metadata']['original_line'].split('####')[0]
+            text = sample['metadata']['original_line_data']['sentence']
             target_tags = sample['target_tags']
             aspect_terms = self.terms_from_tags(target_tags, words)
             if len(aspect_terms) > 1:
@@ -3013,6 +3433,8 @@ class ToweEstimator(Estimator):
                         parts[-2] = start_index
                         parts[-1] = end_index
                         adjusted_ate_pred.append('-'.join(parts))
+                else:
+                    adjusted_ate_pred = ate_pred
                 text_and_ate_pred[line_dict['text']] = adjusted_ate_pred
 
             # aspect term, opinion term pair evaluation
@@ -5091,7 +5513,8 @@ class AsoPredictor(Predictor):
                     word_indices_of_aspect_terms = sample[i]['word_indices_of_aspect_terms']
                     tags = so_result_dict_decoded['tags'][i][: len(words)]
                     opinions = self.terms_from_bio_tags(tags, words)
-                    self.adjust_indices_of_words(opinions, word_indices_of_aspect_terms)
+                    if self.configuration['model_name'] not in ['AsoBertPair', 'AsoBertPairWithPosition']:
+                        self.adjust_indices_of_words(opinions, word_indices_of_aspect_terms)
                     if 'opinion_words_tags' in sample[i]:
                         opinions_true = []
                         for e in original_line_data['opinions']:

@@ -58,7 +58,7 @@ class AspectCategory:
 
 class Text:
     """
-    文本
+
     """
 
     def __init__(self, text, polarity, sample_id=''):
@@ -72,7 +72,7 @@ class Text:
 
 class AbsaText(Text):
     """
-    属性级情感分析中的文本
+
     """
 
     def __init__(self, text, polarity, aspect_categories, aspect_terms, sample_id=''):
@@ -83,7 +83,7 @@ class AbsaText(Text):
 
 class AbsaSentence(AbsaText):
     """
-    一个句子
+
     """
 
     def __init__(self, text, polarity, aspect_categories, aspect_terms, sample_id='', start_index_in_doc=-1):
@@ -93,7 +93,7 @@ class AbsaSentence(AbsaText):
 
 class AbsaDocument(AbsaText):
     """
-    一个文档
+
     """
 
     def __init__(self, text, polarity, aspect_categories, aspect_terms, absa_sentences, sample_id=''):
@@ -125,7 +125,7 @@ class BaseDataset:
 
     def _load_train_dev_test_data(self):
         """
-        加载数据
+
         :return:
         """
         return None, None, None
@@ -211,9 +211,9 @@ class BaseDataset:
 
     def generate_dev_data(self, result, dev_size, random_state=1234):
         """
-        当没有官方发布的开发集时，根据指定参数情况生成开发集
+        ，
         :param result: data_type_and_data
-        :param dev_size: 指定的开发集划分比例
+        :param dev_size:
         :param random_state:
         :return:
         """
@@ -360,7 +360,7 @@ class YelpDataset(BaseDataset):
             for i, line in enumerate(lines):
                 # if i < 100000:
                 #     continue
-                # 太多样本，机器受不了
+                # ，
                 line_dict = json.loads(line)
                 text: str = line_dict['text']
                 if len(text.split()) > self.configuration['max_word_num']:
@@ -399,7 +399,7 @@ class Nlpcc2012WeiboSa(BaseDataset):
         super().__init__(configuration)
 
     def _load_train_dev_test_data(self):
-        data_dir = os.path.join(base_data_dir, 'NLP-CC2012-微博情感分析评测数据', '微博情感分析评测', '测试数据')
+        data_dir = os.path.join(base_data_dir, 'NLP-CC2012-', '', '')
         filenames = os.listdir(data_dir)
         samples = []
         for filename in filenames:
@@ -441,7 +441,7 @@ class Nlpcc2012WeiboSa(BaseDataset):
         samples_train, samples_dev = train_test_split(samples, test_size=0.2, random_state=self.configuration['seed'])
 
         samples_test = []
-        test_data_dir = os.path.join(base_data_dir, 'NLP-CC2012-微博情感分析评测数据', '微博情感分析评测',
+        test_data_dir = os.path.join(base_data_dir, 'NLP-CC2012-', '',
                                      'sonar-weibo-processed')
         test_filenames = os.listdir(test_data_dir)
         for test_filename in test_filenames:
@@ -485,7 +485,7 @@ class FeedComment(BaseDataset):
         super().__init__(configuration)
 
     def _load_train_dev_test_data(self):
-        data_dir = os.path.join(base_data_dir, 'NLP-CC2012-微博情感分析评测数据', '微博情感分析评测', '测试数据')
+        data_dir = os.path.join(base_data_dir, 'NLP-CC2012-', '', '')
         filenames = os.listdir(data_dir)
         samples = []
         for filename in filenames:
@@ -527,7 +527,7 @@ class FeedComment(BaseDataset):
         # samples_train, samples_dev = train_test_split(samples, test_size=0.2, random_state=self.configuration['seed'])
 
         samples_test = []
-        test_data_dir = os.path.join(base_data_dir, 'NLP-CC2012-微博情感分析评测数据', '微博情感分析评测',
+        test_data_dir = os.path.join(base_data_dir, 'NLP-CC2012-', '',
                                      'feed_comment-processed')
         test_filenames = os.listdir(test_data_dir)
         for test_filename in test_filenames:
@@ -1461,7 +1461,7 @@ class SemEval141516LargeRestWithRest14Categories(BaseDataset):
             'DRINKS#QUALITY': 'food',
             'DRINKS#STYLE_OPTIONS': 'food',
             'FOOD#GENERAL': 'food',
-            # 依据 rest14 case I thought the food isn't cheap at all compared to Chinatown.
+            #  rest14 case I thought the food isn't cheap at all compared to Chinatown.
             # <aspectCategory category="price" polarity="negative" />
             'FOOD#PRICES': 'price',
             'FOOD#QUALITY': 'food',
@@ -2202,10 +2202,10 @@ class Semeval2015Task12(BaseDataset):
                 for sentence in document.absa_sentences:
                     content = re.sub('[\r\n]+', ' ', sentence.text)
                     label = []
-                    # 出现同一个entity#aspect下多个aspect term的情况不一致的情况：
-                    # (1)只有中性和正向，最终为正向
-                    # (2) 只有中性和负向，最终为负向
-                    # (3) 既有正向也有负向，最终为conflict
+                    # entity#aspectaspect term：
+                    # (1)，
+                    # (2) ，
+                    # (3) ，conflict
                     aspect_categories_temp = {}
                     for aspect_term in sentence.aspect_terms:
                         category = aspect_term.category
@@ -2811,16 +2811,16 @@ class Bdci2019InternetNews(BaseDataset):
         super().__init__(configuration)
 
     def _load_train_dev_test_data(self):
-        train_filepath = os.path.join(base_data_dir, 'bdci2019', '互联网新闻情感分析',
+        train_filepath = os.path.join(base_data_dir, 'bdci2019', '',
                                       'Train_DataSet.csv')
-        train_label_filepath = os.path.join(base_data_dir, 'bdci2019', '互联网新闻情感分析',
+        train_label_filepath = os.path.join(base_data_dir, 'bdci2019', '',
                                       'Train_DataSet_Label.csv')
         train_rows = load_csv_data(train_filepath)
         train_label_rows = load_csv_data(train_label_filepath)
 
-        test_filepath = os.path.join(base_data_dir, 'bdci2019', '互联网新闻情感分析',
+        test_filepath = os.path.join(base_data_dir, 'bdci2019', '',
                                       'Test_DataSet.csv')
-        test_label_filepath = os.path.join(base_data_dir, 'bdci2019', '互联网新闻情感分析',
+        test_label_filepath = os.path.join(base_data_dir, 'bdci2019', '',
                                       'submit_example.csv')
         test_rows = load_csv_data(test_filepath)
         test_label_rows = load_csv_data(test_label_filepath)
@@ -2858,12 +2858,12 @@ class Bdci2019FinancialNegative(BaseDataset):
 
         :return:
         """
-        train_filepath = os.path.join(base_data_dir, 'bdci2019', '金融信息负面及主体判定',
+        train_filepath = os.path.join(base_data_dir, 'bdci2019', '',
                                       'Train_Data.csv')
         train_rows = load_csv_data(train_filepath)
-        test_filepath = os.path.join(base_data_dir, 'bdci2019', '金融信息负面及主体判定',
+        test_filepath = os.path.join(base_data_dir, 'bdci2019', '',
                                      'Test_Data.csv')
-        test_label_filepath = os.path.join(base_data_dir, 'bdci2019', '金融信息负面及主体判定',
+        test_label_filepath = os.path.join(base_data_dir, 'bdci2019', '',
                                            'Submit_Example.csv')
         test_rows = load_csv_data(test_filepath)
         test_label_rows = load_csv_data(test_label_filepath)

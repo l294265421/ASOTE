@@ -15,6 +15,7 @@ from nlp_tasks.absa.mining_opinions.tosc import tosc_train_templates as template
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--current_dataset', help='dataset name', default='RealASOTripletRest16', type=str)
+parser.add_argument('--version', help='dataset version', default='v2', type=str)
 parser.add_argument('--task_name', help='task name', default='tosc', type=str)
 parser.add_argument('--data_type', help='task name', default='common', type=str)
 parser.add_argument('--model_name', help='model name', default='LSTM', type=str)
@@ -34,7 +35,7 @@ parser.add_argument('--seed', default=776, type=int)
 parser.add_argument('--repeat', default='0', type=str)
 parser.add_argument('--device', default=None, type=str)
 parser.add_argument('--gpu_id', default='0', type=str)
-parser.add_argument('--layer_number_of_lstm', default=3, type=int)
+parser.add_argument('--layer_number_of_lstm', default=1, type=int)
 parser.add_argument('--position', default=False, type=argument_utils.my_bool)
 parser.add_argument('--position_embeddings_dim', help='position embeddings dim', default=32, type=int)
 parser.add_argument('--debug', default=False, type=argument_utils.my_bool)
@@ -74,6 +75,10 @@ parser.add_argument('--consider_target', default=True, type=argument_utils.my_bo
 
 parser.add_argument('--second_sentence', default=False, type=argument_utils.my_bool)
 
+parser.add_argument('--position_and_second_sentence', default=False, type=argument_utils.my_bool)
+
+parser.add_argument('--relative_position', default=False, type=argument_utils.my_bool)
+
 args = parser.parse_args()
 
 args.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu') if args.device is None else torch.device(args.device)
@@ -107,6 +112,8 @@ if model_name in ['LSTM']:
     template = templates.SpanBasedModelForAtsa(configuration_for_this_repeat)
 if model_name in ['bert']:
     template = templates.SpanBasedBertModelForTOSC(configuration_for_this_repeat)
+if model_name in ['bertWithPosition']:
+    template = templates.SpanBasedBertWithPositionModelForTOSC(configuration_for_this_repeat)
 # elif model_name in ['Bert', 'aspect-term-aware-Bert']:
 #     template = templates.SpanBasedBertModelForAtsa(configuration_for_this_repeat)
 # elif model_name in ['Bert-syntax', 'aspect-term-aware-bert-syntax']:

@@ -32,10 +32,10 @@ def generate_embedding_matrix(word_index, nb_words, embedding_file_path, embed_s
     """
 
     Args:
-        word_index: dict, key: 词 value: 词在词典中索引位置
-        nb_words: int, 词典大小
-        embedding_file_path: embedding文件路径
-        embed_size: 词向量长度
+        word_index: dict, key:  value:
+        nb_words: int,
+        embedding_file_path: embedding
+        embed_size:
     """
 
     word_embedding = generate_word_embedding(embedding_file_path, word_index.keys())

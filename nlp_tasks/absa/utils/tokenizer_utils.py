@@ -19,7 +19,7 @@ os.environ['OMP_NUM_THREADS'] = '8'
 
 
 def get_tokenizer(topic_or_sentiment='topic', word_or_char='word'):
-    """返回固定的tokenizer"""
+    """tokenizer"""
     tokenizer = text.Tokenizer(lower=False, filters='')
     if topic_or_sentiment == 'sentiment':
         if word_or_char == 'char':

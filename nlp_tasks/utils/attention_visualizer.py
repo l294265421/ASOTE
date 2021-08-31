@@ -60,10 +60,10 @@ def plot_attentions(words, attentions, labels, title):
         rotation = 30
         plt.setp(label_x, rotation=rotation)
         sns_plot=sns.heatmap(datas[i], annot=True, ax=axis, linewidths=1, vmax=1, fmt='.2f', vmin=0, center=0.3,
-                    cmap='Reds',  annot_kws={'size': 5},cbar=False)  # 图内权重值字体大小调整：annot_kws={'size':9,'weight':'bold', 'color':'blue'}；热力图的颜色风格：YlGnBu,YlOrRd,YlGn,Reds;颜色bar 的设置：1、取消颜色条：cbar=False，2、绘制：cbar_kws={"orientation": "vertical"},
-        sns_plot.tick_params(labelsize=5)# X轴和Y轴坐标字体大小
-        cb = sns_plot.figure.colorbar(sns_plot.collections[0],shrink=1)  # 单独设置来显示colorbar,缩放比例
-        cb.ax.tick_params(labelsize=5)  # 设置colorbar刻度字体大小。
+                    cmap='Reds',  annot_kws={'size': 5},cbar=False)  # ：annot_kws={'size':9,'weight':'bold', 'color':'blue'}；：YlGnBu,YlOrRd,YlGn,Reds;bar ：1、：cbar=False，2、：cbar_kws={"orientation": "vertical"},
+        sns_plot.tick_params(labelsize=5)# XY
+        cb = sns_plot.figure.colorbar(sns_plot.collections[0],shrink=1)  # colorbar,
+        cb.ax.tick_params(labelsize=5)  # colorbar。
         plt.tight_layout(pad=5)
         plt.subplots_adjust(left=0.03, right=1, top=0.7, bottom=0.35)
     plt.show()
@@ -108,10 +108,10 @@ def plot_attentions_pakdd(words, attentions, labels, title):
         # plt.setp(label_y, rotation=y_rotation)
         sns_plot = sns.heatmap(datas[i], annot=True, ax=axis, linewidths=1, vmax=1, fmt='.2f', vmin=0, center=0.3,
                                cmap='Reds', annot_kws={'size': 5}, cbar=True, cbar_kws={
-                'shrink': 1})  # YlGnBu,YlOrRd,YlGn,Reds；, 颜色bar 设置：cbar_kws={"orientation": "vertical"}
-        # sns_plot.tick_params(labelsize=5)# X轴和Y轴坐标字体大小
-        # cb = sns_plot.figure.colorbar(sns_plot.collections[0], shrink=1)  # 单独设置来显示colorbar,缩放比例
-        # cb.ax.tick_params(labelsize=5)  # 设置colorbar刻度字体大小。
+                'shrink': 1})  # YlGnBu,YlOrRd,YlGn,Reds；, bar ：cbar_kws={"orientation": "vertical"}
+        # sns_plot.tick_params(labelsize=5)# XY
+        # cb = sns_plot.figure.colorbar(sns_plot.collections[0], shrink=1)  # colorbar,
+        # cb.ax.tick_params(labelsize=5)  # colorbar。
         # plt.tight_layout(pad=5)
         # plt.subplots_adjust(left=0.03, right=1, top=0.7, bottom=0.35)
     plt.show()
@@ -149,10 +149,10 @@ def plot_multi_attentions_of_sentence(words, attentions_list, labels, titles, sa
         rotation = 30
         plt.setp(label_x, rotation=rotation)
         sns_plot = sns.heatmap(datas[i], annot=True, ax=axis, linewidths=1, vmax=1, fmt='.2f', vmin=0, center=0.3,
-                    cmap='Reds', annot_kws={'size': 15}, cbar=True, cbar_kws={'shrink': 1})  # YlGnBu,YlOrRd,YlGn,Reds；, 颜色bar 设置：cbar_kws={"orientation": "vertical"}
-        sns_plot.tick_params(labelsize=15)  # X轴和Y轴坐标字体大小
-        # cb = sns_plot.figure.colorbar(sns_plot.collections[0], shrink=1)  # 单独设置来显示colorbar,缩放比例
-        # cb.ax.tick_params(labelsize=5)  # 设置colorbar刻度字体大小。
+                    cmap='Reds', annot_kws={'size': 15}, cbar=True, cbar_kws={'shrink': 1})  # YlGnBu,YlOrRd,YlGn,Reds；, bar ：cbar_kws={"orientation": "vertical"}
+        sns_plot.tick_params(labelsize=15)  # XY
+        # cb = sns_plot.figure.colorbar(sns_plot.collections[0], shrink=1)  # colorbar,
+        # cb.ax.tick_params(labelsize=5)  # colorbar。
         plt.tight_layout(pad=5)
         plt.subplots_adjust(left=0.05, right=0.95, top=0.90, bottom=0.09)
     if savefig_filepath:
@@ -193,10 +193,10 @@ def plot_multi_attentions_of_sentence_backup(words, attentions_list, labels, tit
         rotation = 30
         plt.setp(label_x, rotation=rotation)
         sns_plot = sns.heatmap(datas[i], annot=True, ax=axis, linewidths=1, vmax=1, fmt='.2f', vmin=0, center=0.3,
-                    cmap='Reds', annot_kws={'size': 5}, cbar=True, cbar_kws={'shrink': 1})  # YlGnBu,YlOrRd,YlGn,Reds；, 颜色bar 设置：cbar_kws={"orientation": "vertical"}
-        sns_plot.tick_params(labelsize=5)  # X轴和Y轴坐标字体大小
-        # cb = sns_plot.figure.colorbar(sns_plot.collections[0], shrink=1)  # 单独设置来显示colorbar,缩放比例
-        # cb.ax.tick_params(labelsize=5)  # 设置colorbar刻度字体大小。
+                    cmap='Reds', annot_kws={'size': 5}, cbar=True, cbar_kws={'shrink': 1})  # YlGnBu,YlOrRd,YlGn,Reds；, bar ：cbar_kws={"orientation": "vertical"}
+        sns_plot.tick_params(labelsize=5)  # XY
+        # cb = sns_plot.figure.colorbar(sns_plot.collections[0], shrink=1)  # colorbar,
+        # cb.ax.tick_params(labelsize=5)  # colorbar。
         plt.tight_layout(pad=5)
         plt.subplots_adjust(left=0.05, right=0.95, top=0.90, bottom=0.09)
     if savefig_filepath:

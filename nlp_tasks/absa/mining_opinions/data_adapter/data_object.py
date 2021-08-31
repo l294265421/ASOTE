@@ -96,7 +96,7 @@ class BaseDataset:
 
     def _load_train_dev_test_data(self):
         """
-        加载数据
+
         :return:
         """
         return None, None, None
@@ -283,28 +283,57 @@ class ASOTEData(BaseDataset):
             original_line_data = json.loads(line)
             text = original_line_data['sentence']
             words = original_line_data['words']
-            polarity = original_line_data['polarity']
+            if 'polarity' not in original_line_data:
+                target_tags = ['O' for _ in words]
 
-            aspect_term_str = aspect_term_dict_to_str(original_line_data['aspect_term'])
-            key = '%s_%s' % (text, aspect_term_str)
-            keys.add(key)
+                opinion_words_tags = self.to_opinion_tags([], words)
+                if self.configuration is not None and 'opinion_tag_with_sentiment' in self.configuration and not \
+                self.configuration['opinion_tag_with_sentiment']:
+                    opinion_words_tags = self.to_opinion_tags_without_sentiment([], words)
 
-            target_tags = self.to_aspect_tags(original_line_data['aspect_term'], words)
+                opinion_words_tags_for_so = self.to_opinion_tags_for_so([], words)
+                original_line_data['opinion_words_tags_for_so'] = opinion_words_tags_for_so
 
-            opinion_words_tags = self.to_opinion_tags(original_line_data['opinions'], words)
-            if self.configuration is not None and 'opinion_tag_with_sentiment' in self.configuration and not self.configuration['opinion_tag_with_sentiment']:
-                opinion_words_tags = self.to_opinion_tags_without_sentiment(original_line_data['opinions'], words)
+                original_line_data['opinions'] = []
+                metadata = {'original_line_data': original_line_data}
+                sentence = Sentence(text, words, target_tags, opinion_words_tags, metadata=metadata)
+                result.append(sentence)
+            else:
+                polarity = original_line_data['polarity']
 
-            opinion_words_tags_for_so = self.to_opinion_tags_for_so(original_line_data['opinions'], words)
-            original_line_data['opinion_words_tags_for_so'] = opinion_words_tags_for_so
+                aspect_term_str = aspect_term_dict_to_str(original_line_data['aspect_term'])
+                key = '%s_%s' % (text, aspect_term_str)
+                keys.add(key)
 
-            metadata = {'original_line_data': original_line_data}
-            sentence = Sentence(text, words, target_tags, opinion_words_tags, polarity=polarity,
-                                metadata=metadata)
-            result.append(sentence)
+                target_tags = self.to_aspect_tags(original_line_data['aspect_term'], words)
 
-        if self.configuration is not None and 'add_predicted_aspect_term' in self.configuration and self.configuration['add_predicted_aspect_term']:
-            ate_result_lines = file_utils.read_all_lines(self.configuration['ate_result_filepath'])
+                opinion_words_tags = self.to_opinion_tags(original_line_data['opinions'], words)
+                if self.configuration is not None and 'opinion_tag_with_sentiment' in self.configuration and not self.configuration['opinion_tag_with_sentiment']:
+                    opinion_words_tags = self.to_opinion_tags_without_sentiment(original_line_data['opinions'], words)
+
+                opinion_words_tags_for_so = self.to_opinion_tags_for_so(original_line_data['opinions'], words)
+                original_line_data['opinion_words_tags_for_so'] = opinion_words_tags_for_so
+
+                metadata = {'original_line_data': original_line_data}
+                sentence = Sentence(text, words, target_tags, opinion_words_tags, polarity=polarity,
+                                    metadata=metadata)
+                result.append(sentence)
+
+        ate_result_filepath = ''
+        if self.configuration is not None and 'add_predicted_aspect_term' in self.configuration and \
+                self.configuration['add_predicted_aspect_term'] and 'test' in filepath:
+            ate_result_filepath = self.configuration['ate_result_filepath']
+
+        if self.configuration is not None and 'data_augmentation' in self.configuration and \
+                self.configuration['data_augmentation']:
+            if 'train' in filepath:
+                ate_result_filepath = self.configuration['ate_result_filepath'] + '.train'
+            if 'dev' in filepath:
+                ate_result_filepath = self.configuration['ate_result_filepath'] + '.dev'
+
+        error_aspect_term_num = 0
+        if ate_result_filepath:
+            ate_result_lines = file_utils.read_all_lines(ate_result_filepath)
             for line in ate_result_lines:
                 original_line_data = json.loads(line)
 
@@ -317,6 +346,7 @@ class ASOTEData(BaseDataset):
                     if key in keys:
                         continue
 
+                    error_aspect_term_num += 1
                     aspect_term = aspect_term_str_to_dict(aspect_term_str)
 
                     target_tags = self.to_aspect_tags(aspect_term, words)
@@ -343,8 +373,11 @@ class ASOTEData(BaseDataset):
         raise NotImplementedError()
 
     def _load_train_dev_test_data(self):
+        version_name = 'ASOTE'
+        if 'version' in self.configuration and self.configuration['version'] == 'v2':
+            version_name = 'ASOTE-v2'
         base_dir = os.path.join(base_data_dir,
-                                'ASOTE',
+                                version_name,
                                 self._get_sub_dir(),
                                 'asote_gold_standard'
                                 )
@@ -851,9 +884,9 @@ class SemEvalTripletDataV2(BaseDataset):
             words = text.split(' ')
 
             labels = eval(parts[1])
-            # 针对15和16的数据集，当一个句子对一个aspect term同时表达不同情感的观点时，emnlp2020用标注里最后那个
-            # 情感作为所有三元组的观点
-            # 示例(16res)
+            # 1516，aspect term，emnlp2020
+            #
+            # (16res)
             # Spreads and toppings are great - though a bit pricey.
             # Food was just average...if they lowered the prices just a bit, it would be a bigger draw.
             aspect_sentiment_and_opinions = defaultdict(list)
@@ -1262,11 +1295,14 @@ def explore_asmote_datasets(merge_train_dev=False):
                     more_than_one_opinion_target_num += 1
                 if len(opinion_terms) > 0:
                     statistics['triplet_num'] += 1
+                    if sentence.polarity == 'conflict':
+                        statistics['tc'] += 1
             statistics['sentence_num'] = len(sentences)
             # print(data_type)
-            print('%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d' % (statistics['sentence_num'], statistics['aspect_term_num'],
+            print('%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d' % (statistics['sentence_num'], statistics['aspect_term_num'],
             statistics['triplet_num'], statistics['positive'], statistics['neutral'], statistics['negative'],
-            statistics['conflict'], no_opinion_target_num, one_opinion_target_num, more_than_one_opinion_target_num))
+            statistics['conflict'], no_opinion_target_num, one_opinion_target_num, more_than_one_opinion_target_num,
+            statistics['tc']))
             data_type_and_statistics[data_type] = statistics
         print(dict(data_type_and_statistics))
 
@@ -1278,7 +1314,10 @@ def explore_asote_datasets(merge_train_dev=False):
     """
     print('ASOTE')
     dataset_names = ['ASOTEDataRest14', 'ASOTEDataLapt14', 'ASOTEDataRest15', 'ASOTEDataRest16']
-    configuration = {'include_conflict': False}
+    configuration = {
+        'include_conflict': True,
+        'version': 'v2'
+    }
     for dataset_name in dataset_names:
         print('dataset_name: %s' % dataset_name)
         dataset = get_dataset_class_by_name(dataset_name)(configuration)
@@ -1294,7 +1333,8 @@ def explore_asote_datasets(merge_train_dev=False):
             for sentence in data:
                 sentence: Sentence = sentence
                 sentences.add(sentence.text)
-                statistics['aspect_term_num'] += 1
+                if sentence.polarity:
+                    statistics['aspect_term_num'] += 1
 
                 original_line_data = sentence.metadata['original_line_data']
                 opinions = original_line_data['opinions']
@@ -1304,6 +1344,9 @@ def explore_asote_datasets(merge_train_dev=False):
                     if 'polarity' in opinion_term:
                         unique_sentiments.add(opinion_term['polarity'])
                         valid_opinions.append(opinion_term)
+
+                        if opinion_term['polarity'] != sentence.polarity:
+                            statistics['triplets_with_sentiment_different_from_aspect'] += 1
                 if len(unique_sentiments) > 1:
                     statistics['aspect_with_different_sentiments'] += 1
                 if len(valid_opinions) == 0:
@@ -1318,17 +1361,66 @@ def explore_asote_datasets(merge_train_dev=False):
                 statistics['triplets_num'] += len(valid_opinions)
             statistics['sentence_num'] = len(sentences)
             # print(data_type)
-            print('%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d' % (statistics['sentence_num'],
+            print('%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d' % (statistics['sentence_num'],
                                                   statistics['aspect_term_num'],
                                                   statistics['triplets_num'],
                                                   statistics['aspect_with_no_triplets'],
                                                   statistics['aspect_with_one_triplets'],
                                                   statistics['aspect_with_multi_triplets'],
                                                   statistics['aspect_with_different_sentiments'],
-                                                      statistics['aspect_sentiment_different_from_opinion']
+                                                  statistics['aspect_sentiment_different_from_opinion'],
+                                                  statistics['triplets_with_sentiment_different_from_aspect']
                                                   ))
             data_type_and_statistics[data_type] = statistics
         print(dict(data_type_and_statistics))
+
+
+def explore_asote_datasets_for_target_belonging_multiple_triplets(merge_train_dev=False):
+    """
+    ASMOTEDataRest16
+    :return:
+    """
+    print('ASOTE')
+    dataset_names = ['ASOTEDataRest14', 'ASOTEDataLapt14', 'ASOTEDataRest15', 'ASOTEDataRest16']
+    configuration = {
+        'include_conflict': True,
+        'version': 'v2'
+    }
+    for dataset_name in dataset_names:
+        print('dataset_name: %s' % dataset_name)
+        dataset = get_dataset_class_by_name(dataset_name)(configuration)
+        data_type_and_data: dict = dataset.get_data_type_and_data_dict()
+        if merge_train_dev:
+            data_type_and_data['train'].extend(data_type_and_data['dev'])
+            data_type_and_data.pop('dev')
+        for data_type, data in data_type_and_data.items():
+            print('data_type: %s' % data_type)
+            aspect_and_opinions = defaultdict(list)
+            opinion_and_aspects = defaultdict(list)
+            sentences = set()
+            for i, sentence in enumerate(data):
+                sentence: Sentence = sentence
+                sentences.add(sentence.text)
+
+                original_line_data = sentence.metadata['original_line_data']
+                opinions = original_line_data['opinions']
+                for opinion_term in opinions:
+                    if 'polarity' in opinion_term:
+                        aspect_str = aspect_term_dict_to_str(opinion_term['aspect_term'])
+                        opinion_str = aspect_term_dict_to_str(opinion_term['opinion_term'])
+                        aspect_and_opinions['%s_%s' % (sentence.text, aspect_str)].append(opinion_term)
+                        opinion_and_aspects['%s_%s' % (sentence.text, opinion_str)].append(opinion_term)
+
+            aspect_with_multiple_opinion_num = 0
+            for key, value in aspect_and_opinions.items():
+                if len(value) > 1:
+                    aspect_with_multiple_opinion_num += 1
+
+            opinion_with_multiple_aspect_num = 0
+            for key, value in opinion_and_aspects.items():
+                if len(value) > 1:
+                    opinion_with_multiple_aspect_num += 1
+            print('aspect_with_multiple_opinion_num: %d\topinion_with_multiple_aspect_num: %d' % (aspect_with_multiple_opinion_num, opinion_with_multiple_aspect_num))
 
 
 def find_examples_from_asmote_datasets(merge_train_dev=False):
@@ -1384,6 +1476,7 @@ if __name__ == '__main__':
     #     print(data_type_and_statistics)
     # explore_towe_datasets()
     # explore_aste_data_v2_datasets()
-    explore_asmote_datasets()
+    # explore_asmote_datasets()
     # explore_asote_datasets()
+    explore_asote_datasets_for_target_belonging_multiple_triplets()
     # find_examples_from_asmote_datasets()

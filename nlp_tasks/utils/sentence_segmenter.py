@@ -6,7 +6,7 @@ import nltk
 
 class BaseSentenceSegmenter:
     """
-    切分句子
+
     """
 
     def __init__(self, configuration: dict=None):

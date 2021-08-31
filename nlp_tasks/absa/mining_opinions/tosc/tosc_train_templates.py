@@ -305,7 +305,7 @@ class SpanBasedModelForAtsa(ModelTrainTemplate.ModelTrainTemplate):
             serialization_dir=self.model_dir,
             patience=self.configuration['patience'],
             callbacks=callbacks,
-            num_serialized_models_to_keep=2,
+            num_serialized_models_to_keep=0,
             early_stopping_by_batch=self.configuration['early_stopping_by_batch'],
             estimator=estimator,
             grad_clipping=5
@@ -373,8 +373,8 @@ class SpanBasedModelForAtsa(ModelTrainTemplate.ModelTrainTemplate):
                     continue
                 data.append(instance)
                 # text = instance.fields['sample'].metadata['text']
-                # # i love the keyboard and the screen. 都预测正确(来自测试集)
-                # # The best thing about this laptop is the price along with some of the newer features. 来自训练集 都正确
+                # # i love the keyboard and the screen. ()
+                # # The best thing about this laptop is the price along with some of the newer features.
                 # if 'that any existing MagSafe' in text:
                 #     data.append(instance)
                 #     break
@@ -418,8 +418,8 @@ class SpanBasedModelForAtsa(ModelTrainTemplate.ModelTrainTemplate):
                 data = []
                 for instance in data_temp:
                     text = instance.fields['sample'].metadata['text']
-                    # i love the keyboard and the screen. 都预测正确(来自测试集)
-                    # The best thing about this laptop is the price along with some of the newer features. 来自训练集 都正确
+                    # i love the keyboard and the screen. ()
+                    # The best thing about this laptop is the price along with some of the newer features.
                     if sentence in text:
                         data.append(instance)
                 result = predictor.predict(data)
@@ -543,6 +543,118 @@ class SpanBasedBertModelForTOSC(SpanBasedModelForAtsa):
         for param in bert_model.parameters():
             param.requires_grad = (not self.configuration['fixed_bert'])
         bert_embedder = BertEmbedder(bert_model=bert_model, top_layer_only=True)
+
+        bert_word_embedder: TextFieldEmbedder = BasicTextFieldEmbedder({"bert": bert_embedder},
+                                                                       # we'll be ignoring masks so we'll need to set this to True
+                                                                       allow_unmatched_keys=True)
+        bert_word_embedder.to(self.configuration['device'])
+        return bert_word_embedder
+
+    def _find_model_function(self):
+        embedding_dim = self.configuration['embed_size']
+        embedding_matrix_filepath = self.base_data_dir + 'embedding_matrix'
+        if os.path.exists(embedding_matrix_filepath):
+            embedding_matrix = super()._load_object(embedding_matrix_filepath)
+        else:
+            embedding_filepath = self.configuration['embedding_filepath']
+            embedding_matrix = embedding._read_embeddings_from_text_file(embedding_filepath, embedding_dim,
+                                                                         self.vocab, namespace='tokens')
+            super()._save_object(embedding_matrix_filepath, embedding_matrix)
+        token_embedding = Embedding(num_embeddings=self.vocab.get_vocab_size(namespace='tokens'),
+                                    embedding_dim=embedding_dim, padding_index=0, vocab_namespace='tokens',
+                                    trainable=False, weight=embedding_matrix)
+        # the embedder maps the input tokens to the appropriate embedding matrix
+        word_embedder: TextFieldEmbedder = BasicTextFieldEmbedder({"tokens": token_embedding})
+
+        position_embedding = Embedding(num_embeddings=self.vocab.get_vocab_size(namespace='position'),
+                                       embedding_dim=self._get_position_embeddings_dim(), padding_index=0)
+        position_embedder: TextFieldEmbedder = BasicTextFieldEmbedder({"position": position_embedding},
+                                                                      # we'll be ignoring masks so we'll need to set this to True
+                                                                      allow_unmatched_keys=True)
+
+        bert_word_embedder = self._get_bert_word_embedder()
+
+        model_function = self._find_model_function_pure()
+        model = model_function(
+            word_embedder,
+            position_embedder,
+            self.distinct_polarities,
+            self.vocab,
+            self.configuration,
+            bert_word_embedder=bert_word_embedder
+        )
+
+        self._print_args(model)
+        model = model.to(self.configuration['device'])
+        return model
+
+    def _get_optimizer(self, model):
+        _params = filter(lambda p: p.requires_grad, model.parameters())
+        if self.configuration['fixed_bert']:
+            return optim.Adam(_params, lr=0.001, weight_decay=0.00001)
+        else:
+            return optim.Adam(_params, lr=self.configuration['learning_rate_in_bert'],
+                              weight_decay=self.configuration['l2_in_bert'])
+
+    def _get_position_embeddings_dim(self):
+        return self.configuration['position_embeddings_dim']
+
+
+class SpanBasedBertWithPositionModelForTOSC(SpanBasedModelForAtsa):
+    """
+    2019-acl-Open-Domain Targeted Sentiment Analysisvia Span-Based Extraction and Classification
+    """
+
+    def __init__(self, configuration):
+        self.bert_file_path = configuration['bert_file_path']
+        self.bert_vocab_file_path = configuration['bert_vocab_file_path']
+        self.max_len = configuration['max_len']
+        super().__init__(configuration)
+
+    def _find_model_function_pure(self):
+        return pytorch_models.SpanBasedBertWithPositionModelForTOSC
+
+    def _get_data_reader(self):
+        bert_tokenizer = BertTokenizer.from_pretrained(self.bert_vocab_file_path, do_lower_case=True)
+        bert_token_indexer = WordpieceIndexer(vocab=bert_tokenizer.vocab,
+                                              wordpiece_tokenizer=bert_tokenizer.wordpiece_tokenizer.tokenize,
+                                              namespace="bert",
+                                              use_starting_offsets=False,
+                                              max_pieces=self.max_len,
+                                              do_lowercase=True,
+                                              never_lowercase=None,
+                                              start_tokens=None,
+                                              end_tokens=None,
+                                              separator_token="[SEP]",
+                                              truncate_long_sequences=True)
+
+        token_indexer = SingleIdTokenIndexer(namespace="tokens")
+        position_indexer = SingleIdTokenIndexer(namespace='position')
+        reader = tosc_data_reader.TextAspectInSentimentOutBertWithPositionForTOSC(
+            self.distinct_polarities,
+            tokenizer=self._get_word_segmenter(),
+            token_indexers={"tokens": token_indexer},
+            position_indexers={'position': position_indexer},
+            configuration=self.configuration,
+            bert_tokenizer=bert_tokenizer,
+            bert_token_indexers={"bert": bert_token_indexer}
+        )
+        return reader
+
+    def _get_bert_word_embedder(self):
+        # bert_embedder = PretrainedBertEmbedder(
+        #     pretrained_model=self.bert_file_path,
+        #     top_layer_only=True,  # conserve memory
+        #     requires_grad=(not self.configuration['fixed'])
+        # )
+
+        pretrained_model = self.bert_file_path
+        from nlp_tasks.absa.mining_opinions.allennlp_bert_supporting_position import \
+            bert_token_embedder_supporting_position
+        bert_model = bert_token_embedder_supporting_position.PretrainedBertModel.load(pretrained_model, cache_model=False)
+        for param in bert_model.parameters():
+            param.requires_grad = (not self.configuration['fixed_bert'])
+        bert_embedder = bert_token_embedder_supporting_position.BertEmbedder(bert_model=bert_model, top_layer_only=True)
 
         bert_word_embedder: TextFieldEmbedder = BasicTextFieldEmbedder({"bert": bert_embedder},
                                                                        # we'll be ignoring masks so we'll need to set this to True

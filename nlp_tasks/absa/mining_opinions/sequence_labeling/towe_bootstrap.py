@@ -15,6 +15,7 @@ from nlp_tasks.absa.mining_opinions.sequence_labeling import sequence_labeling_t
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--current_dataset', help='dataset name', default='triplet_rest14', type=str)
+parser.add_argument('--version', help='dataset version', default='v2', type=str)
 parser.add_argument('--task_name', help='task name', default='towe', type=str)
 parser.add_argument('--data_type', help='data type', default='common', type=str)
 parser.add_argument('--model_name', help='model name', default='TermBiLSTM', type=str)
@@ -50,7 +51,7 @@ parser.add_argument('--bert_file_path', help='bert_file_path',
                     default=r'D:\program\word-vector\bert-base-uncased.tar.gz', type=str)
 parser.add_argument('--bert_vocab_file_path', help='bert_vocab_file_path',
                     default=r'D:\program\word-vector\uncased_L-12_H-768_A-12\vocab.txt', type=str)
-parser.add_argument('--max_len', help='max length', default=100, type=int)
+parser.add_argument('--max_len', help='max length', default=120, type=int)
 
 parser.add_argument('--same_special_token', default=False, type=argument_utils.my_bool)
 
@@ -64,6 +65,18 @@ parser.add_argument('--include_conflict', default=False, type=argument_utils.my_
 parser.add_argument('--opinion_tag_with_sentiment', default=False, type=argument_utils.my_bool)
 
 parser.add_argument('--add_predicted_aspect_term', default=False, type=argument_utils.my_bool)
+parser.add_argument('--data_augmentation', default=False, type=argument_utils.my_bool)
+
+parser.add_argument('--special_token_and_second_sentence', default=False, type=argument_utils.my_bool)
+parser.add_argument('--position_and_second_sentence', default=False, type=argument_utils.my_bool)
+
+parser.add_argument('--without_second_sentence', default=False, type=argument_utils.my_bool)
+
+parser.add_argument('--relative_position', default=False, type=argument_utils.my_bool)
+
+parser.add_argument('--aspect_to_question', default=False, type=argument_utils.my_bool)
+
+parser.add_argument('--aspect_word', default='aspect', type=str)
 
 args = parser.parse_args()
 
@@ -90,7 +103,7 @@ model_name_complete_prefix = 'model_name_{model_name}-include_conflict_{include_
 configuration_for_this_repeat = copy.deepcopy(configuration)
 configuration_for_this_repeat['model_name_complete'] = '%s.%s' % (model_name_complete_prefix, args.repeat)
 
-if configuration_for_this_repeat['add_predicted_aspect_term']:
+if configuration_for_this_repeat['add_predicted_aspect_term'] or configuration_for_this_repeat['data_augmentation']:
     ate_result_filepath_serial_num = int(configuration_for_this_repeat['repeat'].split('-')[-1])
     ate_result_filepath = configuration['ate_result_filepath_template'] % ate_result_filepath_serial_num
     configuration_for_this_repeat['ate_result_filepath'] = ate_result_filepath
@@ -108,6 +121,10 @@ elif model_name in ['TermBert']:
     template = templates.TermBert(configuration_for_this_repeat)
 elif model_name in ['TermBertWithSecondSentence']:
     template = templates.TermBertWithSecondSentence(configuration_for_this_repeat)
+elif model_name in ['TermBertWithSecondSentenceWithPosition']:
+    template = templates.TermBertWithSecondSentenceWithPosition(configuration_for_this_repeat)
+elif model_name in ['TermBiLSTMWithSecondSentence']:
+    template = templates.TermBiLSTMWithSecondSentence(configuration_for_this_repeat)
 elif model_name in ['IOG']:
     template = templates.IOG(configuration_for_this_repeat)
 else:
@@ -117,10 +134,12 @@ if configuration_for_this_repeat['train']:
     template.train()
 
 if configuration_for_this_repeat['evaluate']:
-    template.evaluate()
+    template.evaluate_v2()
 
 if configuration_for_this_repeat['predict_test']:
     output_filepath = template.model_dir + 'result_of_predicting_test.txt'
+    if configuration_for_this_repeat['add_predicted_aspect_term']:
+        output_filepath = output_filepath + '.add_predicted_aspect_term'
     print('result_of_predicting_test:%s ' % output_filepath)
     template.predict_test_v2(output_filepath)
 

@@ -128,7 +128,7 @@ class SpanBasedModel(Model):
             output['mask'] = sentiment_mask
             output['loss'] = loss
 
-        # 可视化，用模型对每个词进行情感预测，看看预测结果
+        # ，，
         if self.configuration['visualize_attention']:
             for i in range(len(sample)):
                 words = sample[i]['words']
@@ -570,7 +570,7 @@ class SpanBasedBertModel(Model):
             output['mask'] = sentiment_mask
             output['loss'] = loss
 
-        # 可视化，用模型对每个词进行情感预测，看看预测结果
+        # ，，
         if self.configuration['visualize_attention']:
             for i in range(len(sample)):
                 words = sample[i]['words']
@@ -719,7 +719,7 @@ class AtsaBERT(Model):
             output['mask'] = sentiment_mask
             output['loss'] = loss
 
-        # 可视化，用模型对每个词进行情感预测，看看预测结果
+        # ，，
         if self.configuration['visualize_attention']:
             for i in range(len(sample)):
                 words = sample[i]['words']
@@ -773,7 +773,7 @@ class GatEdge:
     def add(self, other_edge: 'GatEdge'):
         """
 
-        :param other_edge:  同样的边
+        :param other_edge:
         :return:
         """
         if self.src_ids != other_edge.src_ids or self.dst_id != other_edge.dst_id:
@@ -838,7 +838,7 @@ class GATLayer(nn.Module):
         z = self.fc(feature)
         batched_graph.ndata['z'] = z
 
-        # 加入node id，用于attention可视化
+        # node id，attention
         node_ids = batched_graph.nodes()
         batched_graph.ndata['node_ids'] = node_ids
 
@@ -853,7 +853,7 @@ class GATLayer(nn.Module):
         output = [torch.unsqueeze(g.ndata.pop('h'), 0) for g in ug]
         output = torch.cat(output, 0)
 
-        # 对for_visualization按照sample进行拆分
+        # for_visualizationsample
         sample_num = len(g)
         node_num_per_sample = h.shape[1]
         edges_of_samples = [[] for _ in range(sample_num)]
@@ -955,7 +955,7 @@ class SyntaxAwareSpanBasedBertModel(Model):
         offsets = tokens['tokens-offsets']
         word_embeddings = self.word_embedder(tokens, token_type_ids=token_type_ids, offsets=offsets)
 
-        # 加图
+        #
         max_len = mask.size()[1]
         graphs = [e['graph'] for e in sample]
         graphs_padded = self.pad_dgl_graph(graphs, max_len)
@@ -1020,7 +1020,7 @@ class SyntaxAwareSpanBasedBertModel(Model):
             output['mask'] = sentiment_mask
             output['loss'] = loss
 
-        # 可视化，用模型对每个词进行情感预测，看看预测结果
+        # ，，
         if self.configuration['visualize_attention']:
             for i in range(len(sample)):
                 words = sample[i]['words']

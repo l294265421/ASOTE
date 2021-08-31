@@ -22,11 +22,11 @@ task_dir = common_path.get_task_data_dir('text_segmentation')
 
 class ModelTrainTemplate:
     """
-    1. 读取配置
-    2. 生成用于训练的数据
-    3. 训练
-    4. 评估
-    5. 观察数据
+    1.
+    2.
+    3.
+    4.
+    5.
     """
 
     def __init__(self, configuration: dict):
@@ -150,14 +150,14 @@ class ModelTrainTemplate:
 
     def _find_model_function(self):
         """
-        一个训练模板支持多个模型，只要这些模型的输入输出一样即可
+        ，
         :return:
         """
         pass
 
     def _transform_data_for_model(self):
         """
-        一个训练模板支持处理多个数据集
+
         :return:
         """
         pass

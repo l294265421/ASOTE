@@ -188,7 +188,7 @@ for i in range(5):
         pred_text_aspect_opinions[text_aspect] = opinions
 
     # case analysis
-    # 正确预测了aspect term，但是没有在标准数据集，我们需要扩展数据集，使之包含没有观点词的数据
+    # aspect term，，，
     # 'While there \'s a decent menu , it should n\'t take ten minutes to get your drinks and 45 for a dessert pizza .-dessert pizza-21-23'
     pred_aspect_sentiment_pairs = set()
     pred_aspect_opinion_pairs = set()

@@ -5,7 +5,7 @@ project_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__
 
 original_data_dir = os.path.join(project_dir, 'ASOTE-data')
 
-common_data_dir = project_dir
+common_data_dir = project_dir + '/model_data/'
 
 common_code_dir = project_dir + '/nlp_tasks/'
 

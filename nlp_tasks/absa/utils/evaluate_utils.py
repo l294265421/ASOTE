@@ -107,14 +107,14 @@ def fn(y_true, y_score):
 def judge_y_score(y_score, threshold):
     """
 
-    :param y_score: list of list of float, 预测的概率
-    :param threshold: list of float, y_score里的每个list中每个位置元素对应的概率
-    :return: list of list of int, y_score中每个元素按照threshold转化为整数
+    :param y_score: list of list of float,
+    :param threshold: list of float, y_scorelist
+    :return: list of list of int, y_scorethreshold
     """
 
     result = []
     for i, one_predict in enumerate(y_score):
-        # 应用于帮助预测概率里都没有超过阈值的情况
+        #
         max_prob = max(one_predict)
         predict_label = []
         for j, predict_probability in enumerate(one_predict):

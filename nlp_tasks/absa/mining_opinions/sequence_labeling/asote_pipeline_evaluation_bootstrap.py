@@ -21,18 +21,19 @@ from nlp_tasks.common import common_path
 parser = argparse.ArgumentParser()
 parser.add_argument('--current_dataset', help='dataset name', default='ASOTEDataRest14', type=str)
 parser.add_argument('--ate_result_filepath_template', help='ate result filepath',
-                    default=os.path.join(common_path.project_dir, 'ASOTE-data', 'absa', 'ASOTE-prediction-result', 'ATE', 'result_of_predicting_test.txt'), type=str)
+                    default=os.path.join(common_path.project_dir, 'AGF-ASOTE-data', 'absa', 'ASOTE-prediction-result', 'ATE', 'result_of_predicting_test.txt'), type=str)
 parser.add_argument('--towe_result_filepath_template', help='towe result filepath',
-                    default=os.path.join(common_path.project_dir, 'ASOTE-data', 'absa', 'ASOTE-prediction-result', 'TOWE', 'result_of_predicting_test.txt'), type=str)
+                    default=os.path.join(common_path.project_dir, 'AGF-ASOTE-data', 'absa', 'ASOTE-prediction-result', 'TOWE', 'result_of_predicting_test.txt.add_predicted_aspect_term'), type=str)
 parser.add_argument('--tosc_result_filepath_template', help='tosc result filepath',
-                    default=os.path.join(common_path.project_dir, 'ASOTE-data', 'absa', 'ASOTE-prediction-result', 'TOSC', 'result_of_predicting_test.txt'), type=str)
+                    default=os.path.join(common_path.project_dir, 'AGF-ASOTE-data', 'absa', 'ASOTE-prediction-result', 'TOSC', 'result_of_predicting_test.txt'), type=str)
 parser.add_argument('--debug', help='debug', default=False, type=argument_utils.my_bool)
+parser.add_argument('--version', help='data version', default='v2', type=str)
 args = parser.parse_args()
 
 configuration = args.__dict__
 
 dataset_name = configuration['current_dataset']
-dataset = data_object.get_dataset_class_by_name(dataset_name)()
+dataset = data_object.get_dataset_class_by_name(dataset_name)(configuration)
 train_dev_test_data = dataset.get_data_type_and_data_dict()
 
 
@@ -152,7 +153,7 @@ def merge_results_of_subtasks(ate_result, tosc_result, towe_result):
                     polarity['polarity']
 
         for aspect in aspect_terms:
-            if aspect not in aspect_and_opinions or len(aspect_and_opinions[aspect]) == 0:
+            if len(aspect_and_opinions[aspect]) == 0:
                 continue
             opinions = aspect_and_opinions[aspect]
             for opinion in opinions:
@@ -217,8 +218,8 @@ def triplets_of_sentence(results_of_subtasks_of_sentence):
     results = set()
     for aspect_term_str in aspect_term_strs:
         sentiment = '-'
-        # 模型会对每个召回的aspect term预测情感，但是为了便于评估，我们只会预测ground truth aspect term的情感，所以用-指示错误的情感
-        # (假设，假设不存在的aspect term的情感一定是错的)
+        # aspect term，，ground truth aspect term，-
+        # (，aspect term)
         if aspect_term_str in aspect_term_str_and_sentiment:
             sentiment = aspect_term_str_and_sentiment[aspect_term_str]
 
@@ -302,6 +303,44 @@ def evaluate_asote(sentences_true, sentences_pred):
     for sentence in sentences_true.keys():
         triplets_true = sentences_true[sentence]
         triplets_pred = sentences_pred[sentence]
+
+        true_triplet_num += len(triplets_true)
+        pred_triplet_num += len(triplets_pred)
+
+        for e in triplets_true:
+            if e in triplets_pred:
+                tp += 1
+    result = get_metrics(true_triplet_num, pred_triplet_num, tp)
+    return result
+
+
+def remove_sentiment(triplets: List[str]):
+    result = []
+    for e in triplets:
+        e = e.replace('_positive_', '_')
+        e = e.replace('_negative_', '_')
+        e = e.replace('_neutral_', '_')
+        e = e.replace('_-_', '_')
+        result.append(e)
+    return result
+
+
+def evaluate_ao_pair(sentences_true, sentences_pred):
+    """
+
+    :param sentences_true:
+    :param sentences_pred:
+    :return:
+    """
+    true_triplet_num = 0
+    pred_triplet_num = 0
+    tp = 0
+    for sentence in sentences_true.keys():
+        triplets_true_temp = sentences_true[sentence]
+        triplets_pred_temp = sentences_pred[sentence]
+
+        triplets_true = remove_sentiment(triplets_true_temp)
+        triplets_pred = remove_sentiment(triplets_pred_temp)
 
         true_triplet_num += len(triplets_true)
         pred_triplet_num += len(triplets_pred)
@@ -463,3 +502,36 @@ for i in range(run_num):
 
 
 print_precision_recall_f1(asote_metrics_of_multi_runs, 'asote_metrics_of_multi_runs')
+
+print('-' * 100)
+asote_metrics_of_multi_runs = []
+for i in range(run_num):
+    if args.debug:
+        ate_result_filepath = ate_result_filepath_template
+        towe_result_filepath = towe_result_filepath_template
+        tosc_result_filepath = tosc_result_filepath_template
+    else:
+        ate_result_filepath = ate_result_filepath_template % i
+        towe_result_filepath = towe_result_filepath_template % i
+        tosc_result_filepath = tosc_result_filepath_template % i
+    if not os.path.exists(ate_result_filepath):
+        print('not exist: %s' % ate_result_filepath)
+        continue
+
+    if not os.path.exists(towe_result_filepath):
+        print('not exist: %s' % towe_result_filepath)
+        continue
+
+    if not os.path.exists(tosc_result_filepath):
+        print('not exist: %s' % tosc_result_filepath)
+        continue
+
+    ate_pred = read_ate_result(ate_result_filepath)
+    towe_pred = read_towe_result(towe_result_filepath)
+    tosc_pred = read_tosc_result(tosc_result_filepath)
+    triplets_pred = merge_results_of_subtasks(ate_pred, tosc_pred, towe_pred)
+
+    asote_metrics_of_multi_runs.append(evaluate_ao_pair(triplets_true, triplets_pred))
+
+
+print_precision_recall_f1(asote_metrics_of_multi_runs, 'ao_pair_metrics_of_multi_runs')

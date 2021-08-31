@@ -18,7 +18,7 @@ def convert_sentiment_value_predict(predict_result):
     """
 
     Args:
-        predict_result: list of list,每个元素都是概率值
+        predict_result: list of list,
     """
     if isinstance(predict_result, np.ndarray):
         predict_result = predict_result.tolist()
@@ -33,7 +33,7 @@ def convert_subject_predict(predict_result, threshold):
     """
 
     Args:
-        predict_result: list of list,每个元素都是概率值
+        predict_result: list of list,
         threshold: float
     """
     if isinstance(predict_result, np.ndarray):
@@ -56,7 +56,7 @@ def convert_subject_sentiment_value_predict(predict_result, threshold=0.8):
     """
 
     Args:
-        predict_result: list of list,每个元素都是概率值
+        predict_result: list of list,
         threshold: float
     """
     if isinstance(predict_result, np.ndarray):
@@ -118,8 +118,8 @@ def save_sentiment_value_result(y_pred, id_test, model_name, is_val=False):
     """
 
     Args:
-        y_pred: 预测结果
-        id_test: 测试集中所有id,保持顺序
+        y_pred:
+        id_test: id,
     """
     if y_pred is None:
         return
@@ -151,8 +151,8 @@ def save_sentiment_value_result_for_topic(y_pred, id_test, model_name, topic):
     """
 
     Args:
-        y_pred: 预测结果
-        id_test: 测试集中所有id,保持顺序
+        y_pred:
+        id_test: id,
     """
     if isinstance(y_pred, np.ndarray):
         y_pred = y_pred.tolist()
@@ -182,8 +182,8 @@ def save_train_sentiment_value_result(y_pred, y_data, out_file_path):
     """
 
     Args:
-        y_pred: 预测结果
-        id_test: 测试集中所有id,保持顺序
+        y_pred:
+        id_test: id,
     """
     if isinstance(y_pred, np.ndarray):
         y_pred = y_pred.tolist()
@@ -205,7 +205,7 @@ def save_train_sentiment_value_result(y_pred, y_data, out_file_path):
             result.append(','.join(parts))
         else:
             result.insert(0, ','.join(parts))
-    result = ['情感,预测情感,预测概率,主题,内容,id'] + result
+    result = [',,,,,id'] + result
     file_utils.write_lines(result, out_file_path)
 
 
@@ -251,7 +251,7 @@ def save_train_subject_result(y_pred, y_data, model_name):
 
     y_pred_probability = convert_predict_for_probability_output(y_pred)
     result = []
-    result.append('主题,预测主题,预测概率,内容,id')
+    result.append(',,,,id')
     for i, id_label in enumerate(id_labels):
         if true_labels[i] == predict_labels[i]:
             continue

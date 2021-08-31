@@ -119,8 +119,8 @@ class SpanBasedModelForRelationClassification(ModelTrainTemplate.ModelTrainTempl
 
                 data = []
 
-                # 正样本
-                # 解决生产负样本时，正样本之间共享opinion term的问题
+                #
+                # ，opinion term
                 positive_sample_keys = set()
                 for original_line_datas in sentence_and_aspect_terms.values():
                     for i in range(len(original_line_datas)):
@@ -134,7 +134,7 @@ class SpanBasedModelForRelationClassification(ModelTrainTemplate.ModelTrainTempl
                             positive_sample_keys.add(sample_key)
                             data.append(temp)
 
-                # 负样本
+                #
                 for original_line_datas in sentence_and_aspect_terms.values():
                     for i in range(len(original_line_datas)):
                         original_line_data_i = original_line_datas[i]
@@ -321,7 +321,7 @@ class SpanBasedModelForRelationClassification(ModelTrainTemplate.ModelTrainTempl
             serialization_dir=self.model_dir,
             patience=self.configuration['patience'],
             callbacks=callbacks,
-            num_serialized_models_to_keep=2,
+            num_serialized_models_to_keep=0,
             early_stopping_by_batch=self.configuration['early_stopping_by_batch'],
             estimator=estimator,
             grad_clipping=5
@@ -378,8 +378,8 @@ class SpanBasedModelForRelationClassification(ModelTrainTemplate.ModelTrainTempl
                     continue
                 data.append(instance)
                 # text = instance.fields['sample'].metadata['text']
-                # # i love the keyboard and the screen. 都预测正确(来自测试集)
-                # # The best thing about this laptop is the price along with some of the newer features. 来自训练集 都正确
+                # # i love the keyboard and the screen. ()
+                # # The best thing about this laptop is the price along with some of the newer features.
                 # if 'that any existing MagSafe' in text:
                 #     data.append(instance)
                 #     break
@@ -423,8 +423,8 @@ class SpanBasedModelForRelationClassification(ModelTrainTemplate.ModelTrainTempl
                 data = []
                 for instance in data_temp:
                     text = instance.fields['sample'].metadata['text']
-                    # i love the keyboard and the screen. 都预测正确(来自测试集)
-                    # The best thing about this laptop is the price along with some of the newer features. 来自训练集 都正确
+                    # i love the keyboard and the screen. ()
+                    # The best thing about this laptop is the price along with some of the newer features.
                     if sentence in text:
                         data.append(instance)
                 result = predictor.predict(data)
@@ -538,8 +538,8 @@ class SpanBasedModelForMultiRelationClassification(SpanBasedModelForRelationClas
                 data = []
                 for instance in data_temp:
                     text = instance.fields['sample'].metadata['text']
-                    # i love the keyboard and the screen. 都预测正确(来自测试集)
-                    # The best thing about this laptop is the price along with some of the newer features. 来自训练集 都正确
+                    # i love the keyboard and the screen. ()
+                    # The best thing about this laptop is the price along with some of the newer features.
                     if sentence in text:
                         data.append(instance)
                 result = predictor.predict(data)

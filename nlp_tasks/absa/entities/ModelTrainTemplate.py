@@ -22,17 +22,17 @@ task_dir = common_path.get_task_data_dir('absa')
 
 class ModelTrainTemplate:
     """
-    1. 读取配置
-    2. 生成用于训练的数据
-    3. 训练
-    4. 评估
-    5. 观察数据
+    1.
+    2.
+    3.
+    4.
+    5.
     """
 
     def __init__(self, configuration: dict):
         self.configuration = configuration
-        # 同一个任务、同一个数据集、不同模型应该共享同一份数据；同一份数据可能因为模型不同会有不同的预处理方式，
-        # 对应不同数据类型
+        # 、、；，
+        #
         if 'data_type' not in self.configuration:
             self.configuration['data_type'] = 'common'
         self.base_data_dir = task_dir + ('{task_name}/{current_dataset}/{data_type}/'\
@@ -162,14 +162,14 @@ class ModelTrainTemplate:
 
     def _find_model_function(self):
         """
-        一个训练模板支持多个模型，只要这些模型的输入输出一样即可
+        ，
         :return:
         """
         pass
 
     def _transform_data_for_model(self):
         """
-        一个训练模板支持处理多个数据集
+
         :return:
         """
         pass

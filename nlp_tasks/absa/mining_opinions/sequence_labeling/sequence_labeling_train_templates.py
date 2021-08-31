@@ -8,8 +8,6 @@ import json
 
 import torch
 from sklearn.preprocessing import MultiLabelBinarizer
-from keras.preprocessing import text as keras_text
-from keras.preprocessing import sequence as keras_seq
 from allennlp.data.token_indexers import WordpieceIndexer
 from allennlp.data.iterators import BucketIterator
 from allennlp.data.iterators import BasicIterator
@@ -52,17 +50,17 @@ task_dir = common_path.get_task_data_dir('absa')
 
 class ModelTrainTemplate:
     """
-    1. 读取配置
-    2. 生成用于训练的数据
-    3. 训练
-    4. 评估
-    5. 观察数据
+    1.
+    2.
+    3.
+    4.
+    5.
     """
 
     def __init__(self, configuration: dict):
         self.configuration = configuration
-        # 同一个任务、同一个数据集、不同模型应该共享同一份数据；同一份数据可能因为模型不同会有不同的预处理方式，
-        # 对应不同数据类型
+        # 、、；，
+        #
         if 'data_type' not in self.configuration:
             self.configuration['data_type'] = 'common'
         self.base_data_dir = task_dir + ('{task_name}/{current_dataset}/{data_type}/'\
@@ -188,14 +186,14 @@ class ModelTrainTemplate:
 
     def _find_model_function(self):
         """
-        一个训练模板支持多个模型，只要这些模型的输入输出一样即可
+        ，
         :return:
         """
         pass
 
     def _transform_data_for_model(self):
         """
-        一个训练模板支持处理多个数据集
+
         :return:
         """
         pass
@@ -425,7 +423,7 @@ class SequenceLabeling(ModelTrainTemplate):
             serialization_dir=self.model_dir,
             patience=self.configuration['patience'],
             callbacks=callbacks,
-            num_serialized_models_to_keep=2,
+            num_serialized_models_to_keep=0,
             early_stopping_by_batch=self.configuration['early_stopping_by_batch'],
             estimator=estimator,
             grad_clipping=5
@@ -514,37 +512,47 @@ class SequenceLabeling(ModelTrainTemplate):
             term_with_texts.append('%s-%d-%d' % (term_text, term[0], term[1]))
         return term_with_texts
 
-    def predict_test(self, output_filepath, only_error=False):
-        instances = self.test_data
-
-        USE_GPU = torch.cuda.is_available()
-        if USE_GPU:
-            gpu_id = self.configuration['gpu_id']
-        else:
-            gpu_id = -1
-        predictor = pytorch_models.SequenceLabelingModelPredictor(self.model, self.val_iterator,
-                                                                  cuda_device=gpu_id, configuration=self.configuration)
-
-        result = predictor.predict(instances)
-        output_lines = []
-        for i in range(len(instances)):
-            instance = instances[i]
-            words = instance.fields['sample'].metadata['words']
-            # text = instance.fields['sample'].metadata['metadata']['original_line'].split('####')[0]
-            text = ' '.join(words)
-            pred = result[i][: len(words)]
-            term_with_texts = self.terms_from_tags(pred, words)
-            try:
-                gold_term_with_text = self.terms_from_tags(instance.fields['sample'].metadata['all_target_tags'], words)
-            except:
-                gold_term_with_text = []
-            line = json.dumps({'text': text, 'pred': term_with_texts, 'true': gold_term_with_text}, ensure_ascii=False)
-            if only_error:
-                if term_with_texts != gold_term_with_text:
-                    output_lines.append(line)
+    def predict_test(self, output_filepath_prefix, only_error=False):
+        data_type_and_data = {
+            'train': self.train_data,
+            'dev': self.dev_data,
+            'test': self.test_data
+        }
+        for data_type, data in data_type_and_data.items():
+            if data_type == 'test':
+                output_filepath = output_filepath_prefix
             else:
-                output_lines.append(line)
-        file_utils.write_lines(output_lines, output_filepath)
+                output_filepath = '%s.%s' % (output_filepath_prefix, data_type)
+            instances = data
+
+            USE_GPU = torch.cuda.is_available()
+            if USE_GPU:
+                gpu_id = self.configuration['gpu_id']
+            else:
+                gpu_id = -1
+            predictor = pytorch_models.SequenceLabelingModelPredictor(self.model, self.val_iterator,
+                                                                      cuda_device=gpu_id, configuration=self.configuration)
+
+            result = predictor.predict(instances)
+            output_lines = []
+            for i in range(len(instances)):
+                instance = instances[i]
+                words = instance.fields['sample'].metadata['words']
+                # text = instance.fields['sample'].metadata['metadata']['original_line'].split('####')[0]
+                text = ' '.join(words)
+                pred = result[i][: len(words)]
+                term_with_texts = self.terms_from_tags(pred, words)
+                try:
+                    gold_term_with_text = self.terms_from_tags(instance.fields['sample'].metadata['all_target_tags'], words)
+                except:
+                    gold_term_with_text = []
+                line = json.dumps({'text': text, 'pred': term_with_texts, 'true': gold_term_with_text}, ensure_ascii=False)
+                if only_error:
+                    if term_with_texts != gold_term_with_text:
+                        output_lines.append(line)
+                else:
+                    output_lines.append(line)
+            file_utils.write_lines(output_lines, output_filepath)
 
 
 class SimpleSequenceLabeling(SequenceLabeling):
@@ -600,6 +608,37 @@ class ToweModel(SequenceLabeling):
 
     def __init__(self, configuration):
         super().__init__(configuration)
+
+    def evaluate_v2(self):
+        estimator = self._get_estimator(self.model)
+
+        data_type_and_data = {
+            # 'train': self.train_data,
+            # 'dev': self.dev_data,
+            # 'test': self.test_data
+        }
+
+        reader = self.data_reader
+
+        train_dev_test_data = self.dataset.get_data_type_and_data_dict()
+        for data_type in train_dev_test_data.keys():
+            data_new = []
+            for sample in train_dev_test_data[data_type]:
+                sample_new = {
+                    'words': sample.words,
+                    'target_tags': sample.target_tags,
+                    'opinion_words_tags': sample.opinion_words_tags,
+                    'polarity': sample.polarity,
+                    'metadata': sample.metadata
+                }
+                data_new.append(sample_new)
+
+            instances = reader.read(data_new)
+            data_type_and_data[data_type] = instances
+
+        for data_type, data in data_type_and_data.items():
+            result = estimator.estimate(data)
+            self.logger.info('data_type: %s result: %s' % (data_type, result))
 
     def predict_test(self, output_filepath):
         instances = self.test_data
@@ -1029,6 +1068,221 @@ class AsoTermModelBert(AsoTermModel):
         return self.configuration['position_embeddings_dim']
 
 
+class AsoBertPair(AsoTermModel):
+    """
+
+    """
+
+    def __init__(self, configuration):
+        self.bert_file_path = configuration['bert_file_path']
+        self.bert_vocab_file_path = configuration['bert_vocab_file_path']
+        self.max_len = configuration['max_len']
+        super().__init__(configuration)
+
+    def _get_data_reader(self):
+        token_indexer = SingleIdTokenIndexer(namespace="tokens")
+        position_indexer = SingleIdTokenIndexer(namespace='position')
+        bert_tokenizer = BertTokenizer.from_pretrained(self.bert_vocab_file_path, do_lower_case=True)
+        bert_token_indexer = WordpieceIndexer(vocab=bert_tokenizer.vocab,
+                                              wordpiece_tokenizer=bert_tokenizer.wordpiece_tokenizer.tokenize,
+                                              namespace="bert",
+                                              use_starting_offsets=False,
+                                              max_pieces=self.max_len,
+                                              do_lowercase=True,
+                                              never_lowercase=None,
+                                              start_tokens=None,
+                                              end_tokens=None,
+                                              separator_token="[SEP]",
+                                              truncate_long_sequences=True)
+        reader = sequence_labeling_data_reader.DatasetReaderForAsoBertPair(
+            tokenizer=self._get_word_segmenter(),
+            token_indexers={"tokens": token_indexer},
+            position_indexers={'position': position_indexer},
+            configuration=self.configuration,
+            bert_tokenizer=bert_tokenizer,
+            bert_token_indexers={"bert": bert_token_indexer}
+        )
+        return reader
+
+    def _find_model_function_pure(self):
+        return pytorch_models.AsoTermBiLSTMBert
+
+    def _get_bert_word_embedder(self):
+        # bert_embedder = PretrainedBertEmbedder(
+        #     pretrained_model=self.bert_file_path,
+        #     top_layer_only=True,  # conserve memory
+        #     requires_grad=(not self.configuration['fixed'])
+        # )
+
+        pretrained_model = self.bert_file_path
+        bert_model = PretrainedBertModel.load(pretrained_model, cache_model=False)
+        for param in bert_model.parameters():
+            param.requires_grad = (not self.configuration['fixed_bert'])
+        bert_embedder = BertEmbedder(bert_model=bert_model, top_layer_only=True)
+
+        bert_word_embedder: TextFieldEmbedder = BasicTextFieldEmbedder({"bert": bert_embedder},
+                                                                       # we'll be ignoring masks so we'll need to set this to True
+                                                                       allow_unmatched_keys=True)
+        bert_word_embedder.to(self.configuration['device'])
+        return bert_word_embedder
+
+    def _find_model_function(self):
+        embedding_dim = self.configuration['embed_size']
+        embedding_matrix_filepath = self.base_data_dir + 'embedding_matrix'
+        if os.path.exists(embedding_matrix_filepath):
+            embedding_matrix = super()._load_object(embedding_matrix_filepath)
+        else:
+            embedding_filepath = self.configuration['embedding_filepath']
+            embedding_matrix = embedding._read_embeddings_from_text_file(embedding_filepath, embedding_dim,
+                                                                         self.vocab, namespace='tokens')
+            super()._save_object(embedding_matrix_filepath, embedding_matrix)
+        token_embedding = Embedding(num_embeddings=self.vocab.get_vocab_size(namespace='tokens'),
+                                    embedding_dim=embedding_dim, padding_index=0, vocab_namespace='tokens',
+                                    trainable=False, weight=embedding_matrix)
+        # the embedder maps the input tokens to the appropriate embedding matrix
+        word_embedder: TextFieldEmbedder = BasicTextFieldEmbedder({"tokens": token_embedding})
+
+        position_embedding = Embedding(num_embeddings=self.vocab.get_vocab_size(namespace='position'),
+                                       embedding_dim=self._get_position_embeddings_dim(), padding_index=0)
+        position_embedder: TextFieldEmbedder = BasicTextFieldEmbedder({"position": position_embedding},
+                                                                      # we'll be ignoring masks so we'll need to set this to True
+                                                                      allow_unmatched_keys=True)
+
+        bert_word_embedder = self._get_bert_word_embedder()
+
+        model_function = self._find_model_function_pure()
+        model = model_function(
+            word_embedder,
+            position_embedder,
+            self.vocab,
+            self.configuration,
+            bert_word_embedder=bert_word_embedder
+        )
+
+        self._print_args(model)
+        model = model.to(self.configuration['device'])
+        return model
+
+    def _get_optimizer(self, model):
+        _params = filter(lambda p: p.requires_grad, model.parameters())
+        if self.configuration['fixed_bert']:
+            return optim.Adam(_params, lr=0.001, weight_decay=0.00001)
+        else:
+            return optim.Adam(_params, lr=self.configuration['learning_rate_in_bert'],
+                              weight_decay=self.configuration['l2_in_bert'])
+
+    def _get_position_embeddings_dim(self):
+        return self.configuration['position_embeddings_dim']
+
+
+class AsoBertPairWithPosition(AsoTermModel):
+    """
+
+    """
+
+    def __init__(self, configuration):
+        self.bert_file_path = configuration['bert_file_path']
+        self.bert_vocab_file_path = configuration['bert_vocab_file_path']
+        self.max_len = configuration['max_len']
+        super().__init__(configuration)
+
+    def _get_data_reader(self):
+        token_indexer = SingleIdTokenIndexer(namespace="tokens")
+        position_indexer = SingleIdTokenIndexer(namespace='position')
+        bert_tokenizer = BertTokenizer.from_pretrained(self.bert_vocab_file_path, do_lower_case=True)
+        bert_token_indexer = WordpieceIndexer(vocab=bert_tokenizer.vocab,
+                                              wordpiece_tokenizer=bert_tokenizer.wordpiece_tokenizer.tokenize,
+                                              namespace="bert",
+                                              use_starting_offsets=False,
+                                              max_pieces=self.max_len,
+                                              do_lowercase=True,
+                                              never_lowercase=None,
+                                              start_tokens=None,
+                                              end_tokens=None,
+                                              separator_token="[SEP]",
+                                              truncate_long_sequences=True)
+        reader = sequence_labeling_data_reader.DatasetReaderForAsoBertPairWithPosition(
+            tokenizer=self._get_word_segmenter(),
+            token_indexers={"tokens": token_indexer},
+            position_indexers={'position': position_indexer},
+            configuration=self.configuration,
+            bert_tokenizer=bert_tokenizer,
+            bert_token_indexers={"bert": bert_token_indexer}
+        )
+        return reader
+
+    def _find_model_function_pure(self):
+        return pytorch_models.AsoTermBiLSTMBertWithPosition
+
+    def _get_bert_word_embedder(self):
+        # bert_embedder = PretrainedBertEmbedder(
+        #     pretrained_model=self.bert_file_path,
+        #     top_layer_only=True,  # conserve memory
+        #     requires_grad=(not self.configuration['fixed'])
+        # )
+
+        pretrained_model = self.bert_file_path
+        from nlp_tasks.absa.mining_opinions.allennlp_bert_supporting_position import bert_token_embedder_supporting_position
+        bert_model = bert_token_embedder_supporting_position.PretrainedBertModel.load(pretrained_model, cache_model=False)
+        for param in bert_model.parameters():
+            param.requires_grad = (not self.configuration['fixed_bert'])
+        bert_embedder = bert_token_embedder_supporting_position.BertEmbedder(bert_model=bert_model, top_layer_only=True)
+
+        bert_word_embedder: TextFieldEmbedder = BasicTextFieldEmbedder({"bert": bert_embedder},
+                                                                       # we'll be ignoring masks so we'll need to set this to True
+                                                                       allow_unmatched_keys=True)
+        bert_word_embedder.to(self.configuration['device'])
+        return bert_word_embedder
+
+    def _find_model_function(self):
+        embedding_dim = self.configuration['embed_size']
+        embedding_matrix_filepath = self.base_data_dir + 'embedding_matrix'
+        if os.path.exists(embedding_matrix_filepath):
+            embedding_matrix = super()._load_object(embedding_matrix_filepath)
+        else:
+            embedding_filepath = self.configuration['embedding_filepath']
+            embedding_matrix = embedding._read_embeddings_from_text_file(embedding_filepath, embedding_dim,
+                                                                         self.vocab, namespace='tokens')
+            super()._save_object(embedding_matrix_filepath, embedding_matrix)
+        token_embedding = Embedding(num_embeddings=self.vocab.get_vocab_size(namespace='tokens'),
+                                    embedding_dim=embedding_dim, padding_index=0, vocab_namespace='tokens',
+                                    trainable=False, weight=embedding_matrix)
+        # the embedder maps the input tokens to the appropriate embedding matrix
+        word_embedder: TextFieldEmbedder = BasicTextFieldEmbedder({"tokens": token_embedding})
+
+        position_embedding = Embedding(num_embeddings=self.vocab.get_vocab_size(namespace='position'),
+                                       embedding_dim=self._get_position_embeddings_dim(), padding_index=0)
+        position_embedder: TextFieldEmbedder = BasicTextFieldEmbedder({"position": position_embedding},
+                                                                      # we'll be ignoring masks so we'll need to set this to True
+                                                                      allow_unmatched_keys=True)
+
+        bert_word_embedder = self._get_bert_word_embedder()
+
+        model_function = self._find_model_function_pure()
+        model = model_function(
+            word_embedder,
+            position_embedder,
+            self.vocab,
+            self.configuration,
+            bert_word_embedder=bert_word_embedder
+        )
+
+        self._print_args(model)
+        model = model.to(self.configuration['device'])
+        return model
+
+    def _get_optimizer(self, model):
+        _params = filter(lambda p: p.requires_grad, model.parameters())
+        if self.configuration['fixed_bert']:
+            return optim.Adam(_params, lr=0.001, weight_decay=0.00001)
+        else:
+            return optim.Adam(_params, lr=self.configuration['learning_rate_in_bert'],
+                              weight_decay=self.configuration['l2_in_bert'])
+
+    def _get_position_embeddings_dim(self):
+        return self.configuration['position_embeddings_dim']
+
+
 class AsteTermModel(SequenceLabeling):
     """
 
@@ -1222,7 +1476,7 @@ class WarmupAsteTermModel(AsteTermModel):
                 for parameter in layer.parameters():
                     if parameter.requires_grad:
                         towe_parameters.append(parameter)
-            ignored_params = list(map(id, towe_parameters))  # 返回的是parameters的 内存地址
+            ignored_params = list(map(id, towe_parameters))  # parameters
             base_params = filter(lambda p: p.requires_grad and id(p) not in ignored_params, model.parameters())
             return optim.Adam(
                 [{'params': base_params},
@@ -1271,7 +1525,7 @@ class WarmupAsteTermModel(AsteTermModel):
                 serialization_dir=towe_model_dir,
                 patience=self.configuration['patience'],
                 callbacks=callbacks,
-                num_serialized_models_to_keep=2,
+                num_serialized_models_to_keep=0,
                 early_stopping_by_batch=self.configuration['early_stopping_by_batch'],
                 estimator=estimator,
                 grad_clipping=5
@@ -1309,7 +1563,7 @@ class WarmupAsteTermModel(AsteTermModel):
             serialization_dir=self.model_dir,
             patience=self.configuration['patience'],
             callbacks=callbacks,
-            num_serialized_models_to_keep=2,
+            num_serialized_models_to_keep=0,
             early_stopping_by_batch=self.configuration['early_stopping_by_batch'],
             estimator=estimator,
             grad_clipping=5
@@ -1778,7 +2032,7 @@ class AsteTermBert(WarmupAsteTermModel):
                     for parameter in layer.parameters():
                         if parameter.requires_grad:
                             towe_parameters.append(parameter)
-                ignored_params = list(map(id, towe_parameters))  # 返回的是parameters的 内存地址
+                ignored_params = list(map(id, towe_parameters))  # parameters
                 base_params = filter(lambda p: p.requires_grad and id(p) not in ignored_params, model.parameters())
                 return optim.Adam(
                     [{'params': base_params},
@@ -1898,6 +2152,124 @@ class TermBertWithSecondSentence(TermBert):
             bert_token_indexers={"bert": bert_token_indexer}
         )
         return reader
+
+
+class TermBertWithSecondSentenceWithPosition(TermBert):
+    """
+
+    """
+
+    def __init__(self, configuration):
+        super().__init__(configuration)
+
+    def _get_data_reader(self):
+        token_indexer = SingleIdTokenIndexer(namespace="tokens")
+        position_indexer = SingleIdTokenIndexer(namespace='position')
+        bert_tokenizer = BertTokenizer.from_pretrained(self.bert_vocab_file_path, do_lower_case=True)
+        bert_token_indexer = WordpieceIndexer(vocab=bert_tokenizer.vocab,
+                                              wordpiece_tokenizer=bert_tokenizer.wordpiece_tokenizer.tokenize,
+                                              namespace="bert",
+                                              use_starting_offsets=False,
+                                              max_pieces=self.max_len,
+                                              do_lowercase=True,
+                                              never_lowercase=None,
+                                              start_tokens=None,
+                                              end_tokens=None,
+                                              separator_token="[SEP]",
+                                              truncate_long_sequences=True)
+        reader = sequence_labeling_data_reader.DatasetReaderForTermBertWithSecondSentenceWithPosition(
+            tokenizer=self._get_word_segmenter(),
+            token_indexers={"tokens": token_indexer},
+            position_indexers={'position': position_indexer},
+            configuration=self.configuration,
+            bert_tokenizer=bert_tokenizer,
+            bert_token_indexers={"bert": bert_token_indexer}
+        )
+        return reader
+
+    def _get_bert_word_embedder(self):
+        # bert_embedder = PretrainedBertEmbedder(
+        #     pretrained_model=self.bert_file_path,
+        #     top_layer_only=True,  # conserve memory
+        #     requires_grad=(not self.configuration['fixed'])
+        # )
+
+        pretrained_model = self.bert_file_path
+        from nlp_tasks.absa.mining_opinions.allennlp_bert_supporting_position import \
+            bert_token_embedder_supporting_position
+        bert_model = bert_token_embedder_supporting_position.PretrainedBertModel.load(pretrained_model,
+                                                                                      cache_model=False)
+        for param in bert_model.parameters():
+            param.requires_grad = (not self.configuration['fixed_bert'])
+        bert_embedder = bert_token_embedder_supporting_position.BertEmbedder(bert_model=bert_model, top_layer_only=True)
+
+        bert_word_embedder: TextFieldEmbedder = BasicTextFieldEmbedder({"bert": bert_embedder},
+                                                                       # we'll be ignoring masks so we'll need to set this to True
+                                                                       allow_unmatched_keys=True)
+        bert_word_embedder.to(self.configuration['device'])
+        return bert_word_embedder
+
+    def _find_model_function_pure(self):
+        return pytorch_models.TermBertWithPosition
+
+
+class TermBiLSTMWithSecondSentence(TermBert):
+    """
+
+    """
+
+    def __init__(self, configuration):
+        super().__init__(configuration)
+
+    def _get_data_reader(self):
+        token_indexer = SingleIdTokenIndexer(namespace="tokens")
+        position_indexer = SingleIdTokenIndexer(namespace='position')
+        bert_tokenizer = BertTokenizer.from_pretrained(self.bert_vocab_file_path, do_lower_case=True)
+        bert_token_indexer = WordpieceIndexer(vocab=bert_tokenizer.vocab,
+                                              wordpiece_tokenizer=bert_tokenizer.wordpiece_tokenizer.tokenize,
+                                              namespace="bert",
+                                              use_starting_offsets=False,
+                                              max_pieces=self.max_len,
+                                              do_lowercase=True,
+                                              never_lowercase=None,
+                                              start_tokens=None,
+                                              end_tokens=None,
+                                              separator_token="[SEP]",
+                                              truncate_long_sequences=True)
+        reader = sequence_labeling_data_reader.DatasetReaderForTermBiLSTMWithSecondSentence(
+            tokenizer=self._get_word_segmenter(),
+            token_indexers={"tokens": token_indexer},
+            position_indexers={'position': position_indexer},
+            configuration=self.configuration,
+            bert_tokenizer=bert_tokenizer,
+            bert_token_indexers={"bert": bert_token_indexer}
+        )
+        return reader
+
+    def _get_bert_word_embedder(self):
+        # bert_embedder = PretrainedBertEmbedder(
+        #     pretrained_model=self.bert_file_path,
+        #     top_layer_only=True,  # conserve memory
+        #     requires_grad=(not self.configuration['fixed'])
+        # )
+
+        pretrained_model = self.bert_file_path
+        from nlp_tasks.absa.mining_opinions.allennlp_bert_supporting_position import \
+            bert_token_embedder_supporting_position
+        bert_model = bert_token_embedder_supporting_position.PretrainedBertModel.load(pretrained_model,
+                                                                                      cache_model=False)
+        for param in bert_model.parameters():
+            param.requires_grad = (not self.configuration['fixed_bert'])
+        bert_embedder = bert_token_embedder_supporting_position.BertEmbedder(bert_model=bert_model, top_layer_only=True)
+
+        bert_word_embedder: TextFieldEmbedder = BasicTextFieldEmbedder({"bert": bert_embedder},
+                                                                       # we'll be ignoring masks so we'll need to set this to True
+                                                                       allow_unmatched_keys=True)
+        bert_word_embedder.to(self.configuration['device'])
+        return bert_word_embedder
+
+    def _find_model_function_pure(self):
+        return pytorch_models.TermBiLSTMWithSecondSentence
 
 
 class AsteTermBertWithSecondSentence(AsteTermBert):

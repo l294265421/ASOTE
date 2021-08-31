@@ -32,7 +32,7 @@ class SerialNumber:
 
 class ConstituencyTreeNode:
     """
-    成分句法树节点
+
     """
     def __init__(self, labels: str, text: str, node_id: int = -1, start: int = -1, end: int = -1,
                  depth: int = -1):

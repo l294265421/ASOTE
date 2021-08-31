@@ -14,7 +14,7 @@ f1s = []
 result_filepath_of_test = []
 lines = file_utils.read_all_lines(input_filepath)
 for line in lines:
-    if 'sequence_labeling_train_templates.py-457' in line and 'data_type: test result' in line:
+    if 'sequence_labeling_train_templates.py-454' in line and 'data_type: test result' in line:
         start_index = line.index('{')
         performances_str = line[start_index:].replace('\'', '"')
         performances = json.loads(performances_str)

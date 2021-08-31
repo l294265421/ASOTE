@@ -907,7 +907,7 @@ class MultiLabelF1Backup(Callback):
 
             logs['f1'] = f1
 
-            # 每个类别的验证精度
+            #
             for i in range(len(y_pred)):
                 label = label_mapping.subject_mapping_reverse[str(i)]
                 y_pred_i = evaluate_utils.to_list(y_pred[i])
@@ -957,7 +957,7 @@ class MultiLabelF1OtherOutput(Callback):
 
             logs['f1'] = f1
 
-            # 每个类别的验证精度
+            #
             for i in range(len(y_pred)):
                 label = label_mapping.subject_mapping_reverse[str(i)]
                 y_pred_i = evaluate_utils.to_list(y_pred[i])
@@ -1415,8 +1415,8 @@ def cv_multi_output_count(x_train, y_train, k, x_test, x_val, epochs, monitor_th
 def bagging_multi_output(x_train, y_train, k, x_test, epochs, batch_size, model_names,
                     models, *model_fun_arg):
     """
-    需要实现:
-    1. 支持不同模型
+    :
+    1.
     """
     result = []
     kf = KFold(n_splits=k, shuffle=True, random_state=233)

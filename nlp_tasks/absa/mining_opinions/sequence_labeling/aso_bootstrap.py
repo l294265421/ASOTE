@@ -15,6 +15,7 @@ from nlp_tasks.absa.mining_opinions.sequence_labeling import sequence_labeling_t
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--current_dataset', help='dataset name', default='RealASOTripletRest16', type=str)
+parser.add_argument('--version', help='dataset version', default='v2', type=str)
 parser.add_argument('--task_name', help='task name', default='aso', type=str)
 parser.add_argument('--data_type', help='data type', default='common', type=str)
 parser.add_argument('--model_name', help='model name', default='AsoTermModel', type=str)
@@ -92,6 +93,10 @@ parser.add_argument('--learning_rate_scale_for_fine_tuning_towe', default=0.1, t
 parser.add_argument('--output_attention', default=False, type=argument_utils.my_bool)
 
 parser.add_argument('--add_predicted_aspect_term', default=False, type=argument_utils.my_bool)
+parser.add_argument('--data_augmentation', default=False, type=argument_utils.my_bool)
+
+parser.add_argument('--special_token_and_second_sentence', default=False, type=argument_utils.my_bool)
+parser.add_argument('--position_and_second_sentence', default=False, type=argument_utils.my_bool)
 
 args = parser.parse_args()
 
@@ -122,7 +127,7 @@ model_name_complete_prefix = 'model_name_{model_name}'.format_map(configuration)
 configuration_for_this_repeat = copy.deepcopy(configuration)
 configuration_for_this_repeat['model_name_complete'] = '%s.%s' % (model_name_complete_prefix, args.repeat)
 
-if configuration_for_this_repeat['add_predicted_aspect_term']:
+if configuration_for_this_repeat['add_predicted_aspect_term'] or configuration_for_this_repeat['data_augmentation']:
     ate_result_filepath_serial_num = int(configuration_for_this_repeat['repeat'].split('-')[-1])
     ate_result_filepath = configuration['ate_result_filepath_template'] % ate_result_filepath_serial_num
     configuration_for_this_repeat['ate_result_filepath'] = ate_result_filepath
@@ -132,6 +137,10 @@ if model_name in ['AsoTermModel']:
     template = templates.AsoTermModel(configuration_for_this_repeat)
 if model_name in ['AsoTermModelBert']:
     template = templates.AsoTermModelBert(configuration_for_this_repeat)
+if model_name in ['AsoBertPair']:
+    template = templates.AsoBertPair(configuration_for_this_repeat)
+if model_name in ['AsoBertPairWithPosition']:
+    template = templates.AsoBertPairWithPosition(configuration_for_this_repeat)
 elif model_name in ['MILForASO']:
     template = templates.MILForAso(configuration_for_this_repeat)
 elif model_name in ['MILForASOBert']:
@@ -152,6 +161,8 @@ if configuration_for_this_repeat['evaluate']:
 
 if configuration_for_this_repeat['predict_test']:
     output_filepath = template.model_dir + 'result_of_predicting_test.txt'
+    if configuration_for_this_repeat['add_predicted_aspect_term']:
+        output_filepath = output_filepath + '.add_predicted_aspect_term'
     print('result_of_predicting_test:%s ' % output_filepath)
     template.predict_test_V2(output_filepath)
 
