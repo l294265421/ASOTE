@@ -240,7 +240,7 @@ sh repeat_non_bert.sh 5 101-rest16-0,101-rest16-1,101-rest16-2,101-rest16-3,101-
 
 # Experiment
 ## Results on v2
-The Results on v1 are reported [here](https://arxiv.org/pdf/2103.15255v5.pdf).
+The Results on v2 are reported [here](https://arxiv.org/pdf/2103.15255v5.pdf).
 
 # Citation
 ```text
