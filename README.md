@@ -1,4 +1,4 @@
-# The code and data for the paper "[A More Fine-Grained Aspect-Sentiment-Opinion Triplet Extraction Task](https://arxiv.org/pdf/2103.15255v5.pdf)"
+# The code and data for the paper "[A More Fine-Grained Aspect-Sentiment-Opinion Triplet Extraction Task](https://arxiv.org/pdf/2103.15255.pdf)"
 
 # ASOTE
 Aspect-Sentiment-Opinion Triplet Extraction (ASOTE) extracts aspect term, sentiment and opinion term triplets from sentences. In the triplet extracted by ASOTE the sentiment is the sentiment of the aspect term and opinion term pair. For example, given the sentence, "The atmosphere is attractive , but a little uncomfortable.", ASOTE extracts two triplets, ("atmosphere", positive, "attractive") and ("atmosphere", negative, "uncomfortable").
@@ -237,7 +237,7 @@ sh repeat_non_bert.sh 5 101-rest16-0,101-rest16-1,101-rest16-2,101-rest16-3,101-
 
 # Experiment
 ## Results on v2
-The Results on v2 are reported [here](https://arxiv.org/pdf/2103.15255v5.pdf).
+The Results on v2 are reported [here](https://arxiv.org/pdf/2103.15255.pdf).
 
 # Citation
 ```text
