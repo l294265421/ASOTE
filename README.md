@@ -238,7 +238,7 @@ The Results on v2 are reported [here](https://arxiv.org/pdf/2103.15255.pdf).
 
 # Related Work
 - 2022-SIGIR-Training Entire-Space Models for Target-oriented Opinion Words Extraction [paper](https://arxiv.org/abs/2204.07337) [repo](https://github.com/l294265421/SIGIR22-TOWE)
-    - Explore the necessity of training and evaluating Target-oriented Opinion Words Extraction (TOWE) models on entire space. Entire space includes both aspect terms associated at least one opinion words and aspect terms without corresponding opinion words. In our work (this repository), we also train and evaluate ASOTE models on entire space. 
+    - Explore the necessity of training and evaluating Target-oriented Opinion Words Extraction (TOWE) models on entire space. Entire space includes both aspect terms associated at least one opinion words and aspect terms without corresponding opinion words. In our work (this repository), we also train and evaluate ASOTE models on entire space, i.e. sentences without aspect terms, sentences with aspect terms but without aspect term-opinion term pairs, and sentences with aspect term-opinion term pairs. 
 
 # Citation
 ```text
